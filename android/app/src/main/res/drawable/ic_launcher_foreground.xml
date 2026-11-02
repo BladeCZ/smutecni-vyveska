@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Dignified cross symbol in warm gold -->
+    <path
+        android:fillColor="#D97706"
+        android:pathData="M50,22 h8 v18 h18 v8 h-18 v38 h-8 v-38 h-18 v-8 h18 z" />
+</vector>

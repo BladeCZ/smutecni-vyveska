@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">Smuteční vývěska</string>
+    <string name="search_hint">Hledat jméno, obec, rok...</string>
+    <string name="filter_all">Vše</string>
+    <string name="filter_active">Vývěska</string>
+    <string name="filter_announcements">Oznámení</string>
+    <string name="filter_memories">Vzpomínky</string>
+    <string name="filter_archive">Archiv</string>
+</resources>

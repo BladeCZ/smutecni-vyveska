@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.SmutecniVyveska" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#1A1D26</item>
+        <item name="android:navigationBarColor">#0F1117</item>
+    </style>
+</resources>

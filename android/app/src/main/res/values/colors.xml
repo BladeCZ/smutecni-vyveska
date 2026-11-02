@@ -1,0 +1,5 @@
+<resources>
+    <color name="bg_primary">#0F1117</color>
+    <color name="bg_surface">#1A1D26</color>
+    <color name="accent">#D97706</color>
+</resources>

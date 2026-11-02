@@ -1,0 +1,17 @@
+{
+  "name": "Smuteční vývěska PS Horníček",
+  "short_name": "Smuteční vývěska",
+  "description": "Smuteční vývěska a parte pohřební služby Horníček (Moravičany a okolí)",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#1a1d26",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
