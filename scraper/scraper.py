@@ -8,7 +8,7 @@ import re
 import json
 import sqlite3
 import csv
-import base64
+import subprocess
 from datetime import datetime
 import requests
 
@@ -16,14 +16,16 @@ BASE_URL = "https://www.pshornicek.cz"
 URL_VYVESKA = f"{BASE_URL}/c-m-s-page/smutecni-vyveska"
 URL_ARCHIV = f"{BASE_URL}/archiv.html"
 
-# Složky
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 IMAGES_DIR = os.path.join(DATA_DIR, "images")
 WEB_DATA_DIR = os.path.join(ROOT_DIR, "web", "data")
+WEB_IMAGES_DIR = os.path.join(ROOT_DIR, "web", "images")
 DB_JSON_PATH = os.path.join(DATA_DIR, "database.json")
 DB_SQLITE_PATH = os.path.join(DATA_DIR, "database.sqlite")
 DB_CSV_PATH = os.path.join(DATA_DIR, "database.csv")
+
+LOCAL_TESSDATA = os.path.join(ROOT_DIR, "scraper", "tessdata")
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -47,6 +49,112 @@ def clean_name_and_category(title):
 
     name = name.strip("-–: \t\r\n\"'")
     return category, name
+
+def clean_town(town_str):
+    mapping = {
+        "Loštic": "Loštice",
+        "Pavlova": "Pavlov",
+        "Moravičan": "Moravičany",
+        "Červené Lhoty": "Červená Lhota",
+        "Stavenic": "Stavenice",
+        "Mirova": "Mírov",
+        "Mírova": "Mírov",
+        "Lukavice": "Lukavice",
+        "Třeštiny": "Třeština",
+        "Palonína": "Palonín",
+        "Mohelnice": "Mohelnice",
+        "Zvole": "Zvole",
+        "Moravičanech": "Moravičany",
+        "Lošticích": "Loštice"
+    }
+    t = town_str.strip()
+    return mapping.get(t, t)
+
+def find_tesseract():
+    common_paths = [
+        "tesseract",
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+        "/usr/bin/tesseract"
+    ]
+    for p in common_paths:
+        try:
+            res = subprocess.run([p, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if res.returncode == 0:
+                return p
+        except Exception:
+            pass
+    return None
+
+def run_ocr(image_path):
+    tess_exe = find_tesseract()
+    if not tess_exe:
+        return ""
+    
+    cmd = [tess_exe, image_path, "stdout", "-l", "ces"]
+    if os.path.exists(LOCAL_TESSDATA):
+        cmd.extend(["--tessdata-dir", LOCAL_TESSDATA])
+        
+    try:
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", errors="ignore")
+        return res.stdout
+    except Exception as e:
+        print(f"  Chyba při spuštění OCR na {image_path}: {e}")
+        return ""
+
+def parse_parte_text(text, category=""):
+    info = {
+        "residence": "",
+        "age": "",
+        "death_date": "",
+        "death_cause": "",
+        "ceremony": "",
+        "raw_text": text.strip()
+    }
+
+    if not text:
+        return info
+
+    # Bydliště (z Mohelnice, z Loštic...)
+    res_m = re.search(r'\bz\s+([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž\s\-]+?)(?=\n|$)', text)
+    if res_m:
+        raw_res = res_m.group(1).strip()
+        if not re.search(r'\b(?:dne|ve|v|pan|paní|srdci|bolestí)\b', raw_res, re.IGNORECASE):
+            info["residence"] = clean_town(raw_res)
+
+    # Věk
+    age_m = re.search(r'(?:ve\s+v[eě]ku|do[zž]il(?:a)?\s+se)\s+([^.\n]+?let)', text, re.IGNORECASE)
+    if age_m:
+        info["age"] = age_m.group(1).strip()
+
+    # Kdy zemřel(a) / datum
+    death_m = re.search(r'((?:v\s+[a-záčďéěíňóřšťúůýž]+\s+)?dne\s+\d{1,2}\.?\s+[a-záčďéěíňóřšťúůýž]+(?:\s+\d{4})?)', text, re.IGNORECASE)
+    if death_m:
+        info["death_date"] = death_m.group(1).strip()
+
+    # Důvod / způsob úmrtí
+    cause_m = re.search(r'(?:Zemřel|Zemřela|Odešel|Odešla)\s+((?:náhle|tiše|nečekaně|tragicky|po\s+[^,\n]+?nemoci)[^.\n]*)', text, re.IGNORECASE)
+    if cause_m:
+        cause = cause_m.group(1).strip()
+        # Odstranit případné čárky
+        cause = re.sub(r'[,;]+$', '', cause)
+        if len(cause) > 2 and not cause.lower().startswith("dne"):
+            info["death_cause"] = cause
+
+    # Poslední rozloučení / obřad
+    if category == "Vzpomínka":
+        info["ceremony"] = "Vzpomínka na zesnulého"
+    elif re.search(r'bez\s+smutečního\s+obřadu', text, re.IGNORECASE):
+        info["ceremony"] = "Bez smutečního obřadu (na přání zesnulého)"
+    elif re.search(r'(?:uctíte\s+tichou\s+vzpomínkou|tělesné\s+pozůstatky\s+budou\s+zpopelněny)', text, re.IGNORECASE) and not re.search(r'rozloučíme', text, re.IGNORECASE):
+        info["ceremony"] = "Tiché rozloučení bez smutečního obřadu"
+    else:
+        cer_match = re.search(r'rozloučíme\s+([\s\S]+?)(?=\.\s*(?:Po\s+smutečních|Jménem|\n\n|$))', text, re.IGNORECASE)
+        if cer_match:
+            clean_cer = " ".join([l.strip() for l in cer_match.group(1).split() if l.strip()])
+            info["ceremony"] = clean_cer
+
+    return info
 
 def fetch_html(url):
     print(f"Stahuji HTML: {url}")
@@ -96,128 +204,13 @@ def download_image(url, target_path):
         print(f"  Chyba při stahování {url}: HTTP {resp.status_code}")
         return False
 
-def extract_with_gemini(image_path, api_key):
-    """
-    Extrakce detailů pomocí Google Gemini Flash Vision API
-    """
-    try:
-        with open(image_path, "rb") as f:
-            img_b64 = base64.b64encode(f.read()).decode("utf-8")
-
-        prompt = """Analyzuj toto smuteční oznámení (parte) a vrať JSON se strukturovanými údaji:
-{
-  "name": "Celé jméno zesnulé osoby včetně titulů",
-  "age": "Věk (např. 80 let) nebo prázdný řetězec",
-  "death_date": "Datum úmrtí (např. 27. října 2026)",
-  "residence": "Bydliště / obec (např. Mohelnice)",
-  "ceremony_date": "Datum a den obřadu rozloučení (pokud je uveden)",
-  "ceremony_place": "Místo konání obřadu (obřadní síň, kostel, hřbitov apod.)",
-  "survivors": "Zarmoucená rodina / pozůstalí",
-  "quote": "Smuteční citát / verš"
-}
-Vrať POUZE validní JSON bez markdownu kolem."""
-
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-        payload = {
-            "contents": [
-                {
-                    "parts": [
-                        {"text": prompt},
-                        {
-                            "inline_data": {
-                                "mime_type": "image/jpeg",
-                                "data": img_b64
-                            }
-                        }
-                    ]
-                }
-            ]
-        }
-        resp = requests.post(url, json=payload, timeout=30)
-        if resp.status_code == 200:
-            res_json = resp.json()
-            text = res_json['candidates'][0]['content']['parts'][0]['text'].strip()
-            text = re.sub(r'^```json\s*', '', text)
-            text = re.sub(r'\s*```$', '', text)
-            data = json.loads(text)
-            return {
-                "datum_umrti": data.get("death_date", ""),
-                "vek": data.get("age", ""),
-                "misto_bydliste": data.get("residence", ""),
-                "misto_obradu": data.get("ceremony_place", ""),
-                "datum_obradu": data.get("ceremony_date", ""),
-                "pozustali": data.get("survivors", ""),
-                "citat": data.get("quote", ""),
-                "raw_text": f"{data.get('quote', '')}\n{data.get('survivors', '')}".strip()
-            }
-    except Exception as e:
-        print(f"  Gemini API extrakce selhala: {e}")
-    return None
-
-def extract_with_tesseract(image_path):
-    """
-    Extrakce detailů pomocí lokálního Tesseract OCR
-    """
-    details = {
-        "datum_umrti": "",
-        "vek": "",
-        "misto_bydliste": "",
-        "misto_obradu": "",
-        "datum_obradu": "",
-        "pozustali": "",
-        "citat": "",
-        "raw_text": ""
-    }
-    try:
-        import pytesseract
-        from PIL import Image
-        img = Image.open(image_path)
-        try:
-            text = pytesseract.image_to_string(img, lang='ces')
-        except Exception:
-            text = pytesseract.image_to_string(img)
-            
-        details["raw_text"] = text.strip()
-        
-        # Věk
-        age_m = re.search(r'(?:ve\s+v[eě]ku|do[zž]il(?:a)?\s+se)\s+(\d{1,3})\s+let', text, re.IGNORECASE)
-        if age_m:
-            details["vek"] = f"{age_m.group(1)} let"
-            
-        # Datum úmrtí
-        death_m = re.search(r'(?:zem[rř]el(?:a)?|opustil(?:a)?(?:\s+n[aá]s)?).*?(\d{1,2}\.?\s+[a-záčďéěíňóřšťúůýž0-9\.\s]+(?:\d{4})?)', text, re.IGNORECASE)
-        if death_m:
-            details["datum_umrti"] = death_m.group(1).strip()
-            
-        # Bydliště
-        res_m = re.search(r'\bz\s+([A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+(?:\s+[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ][a-záčďéěíňóřšťúůýž]+)?)\b', text)
-        if res_m:
-            details["misto_bydliste"] = res_m.group(0).strip()
-            
-        # Obřad
-        cer_m = re.search(r'(?:rozlou[cč][ií]me|ob[rř]ad).*?(v\s+[^.\n]+)', text, re.IGNORECASE)
-        if cer_m:
-            details["misto_obradu"] = cer_m.group(1).strip()[:100]
-
-    except ImportError:
-        pass
-    except Exception as e:
-        print(f"  Tesseract OCR selhal: {e}")
-    return details
-
-def extract_details(image_path):
-    gemini_key = os.environ.get("GEMINI_API_KEY")
-    if gemini_key:
-        res = extract_with_gemini(image_path, gemini_key)
-        if res:
-            return res
-    return extract_with_tesseract(image_path)
-
 def save_databases(records):
     os.makedirs(DATA_DIR, exist_ok=True)
     os.makedirs(WEB_DATA_DIR, exist_ok=True)
+    os.makedirs(WEB_IMAGES_DIR, exist_ok=True)
     
     records_list = list(records.values())
+    # Seřadit: nejprve aktivní na vývěsce, poté archiv
     records_list.sort(key=lambda x: (0 if x.get("is_active") else 1, x.get("last_seen", "")), reverse=False)
     
     # 1. JSON databáze v data/ i web/data/
@@ -229,6 +222,7 @@ def save_databases(records):
     # 2. SQLite databáze
     conn = sqlite3.connect(DB_SQLITE_PATH)
     cur = conn.cursor()
+    cur.execute("DROP TABLE IF EXISTS obituaries")
     cur.execute("""
     CREATE TABLE IF NOT EXISTS obituaries (
         id TEXT PRIMARY KEY,
@@ -241,6 +235,7 @@ def save_databases(records):
         local_image_path TEXT,
         age TEXT,
         death_date TEXT,
+        death_cause TEXT,
         residence TEXT,
         ceremony TEXT,
         raw_text TEXT,
@@ -253,9 +248,9 @@ def save_databases(records):
         cur.execute("""
         INSERT OR REPLACE INTO obituaries (
             id, name, category, original_title, is_active, is_archived,
-            image_url, local_image_path, age, death_date, residence, ceremony,
+            image_url, local_image_path, age, death_date, death_cause, residence, ceremony,
             raw_text, first_seen, last_seen
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             r.get("id"),
             r.get("name"),
@@ -267,6 +262,7 @@ def save_databases(records):
             r.get("local_image_path"),
             r.get("age", ""),
             r.get("death_date", ""),
+            r.get("death_cause", ""),
             r.get("residence", ""),
             r.get("ceremony", ""),
             r.get("raw_text", ""),
@@ -278,29 +274,31 @@ def save_databases(records):
     print(f"Uložen SQLite: {DB_SQLITE_PATH}")
 
     # 3. CSV export pro Excel
-    with open(DB_CSV_PATH, "w", encoding="utf-8-sig", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["ID", "Jméno", "Kategorie", "Aktivní na vývěsce", "V archivu", "Věk", "Datum úmrtí", "Bydliště", "Místo obřadu", "Původní titulek", "URL obrázku", "Lokalní soubor", "Prvně nalezeno", "Naposledy viděno"])
-        for r in records_list:
-            writer.writerow([
-                r.get("id"),
-                r.get("name"),
-                r.get("category"),
-                "ANO" if r.get("is_active") else "NE",
-                "ANO" if r.get("is_archived") else "NE",
-                r.get("age", ""),
-                r.get("death_date", ""),
-                r.get("residence", ""),
-                r.get("ceremony", ""),
-                r.get("original_title"),
-                r.get("image_url"),
-                r.get("local_image_path"),
-                r.get("first_seen"),
-                r.get("last_seen")
-            ])
+    for path in [DB_CSV_PATH, os.path.join(WEB_DATA_DIR, "database.csv")]:
+        with open(path, "w", encoding="utf-8-sig", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["ID", "Jméno", "Kategorie", "Město/Bydliště", "Věk", "Datum úmrtí", "Důvod úmrtí", "Místo a čas obřadu", "Aktivní na vývěsce", "V archivu", "Původní titulek", "URL obrázku", "Lokalní soubor", "Prvně nalezeno", "Naposledy viděno"])
+            for r in records_list:
+                writer.writerow([
+                    r.get("id"),
+                    r.get("name"),
+                    r.get("category"),
+                    r.get("residence", ""),
+                    r.get("age", ""),
+                    r.get("death_date", ""),
+                    r.get("death_cause", ""),
+                    r.get("ceremony", ""),
+                    "ANO" if r.get("is_active") else "NE",
+                    "ANO" if r.get("is_archived") else "NE",
+                    r.get("original_title"),
+                    r.get("image_url"),
+                    r.get("local_image_path"),
+                    r.get("first_seen"),
+                    r.get("last_seen")
+                ])
     print(f"Uložen CSV: {DB_CSV_PATH}")
 
-def run_scraper():
+def run_scraper(enrich_existing_only=False):
     os.makedirs(IMAGES_DIR, exist_ok=True)
     
     existing_records = {}
@@ -316,95 +314,97 @@ def run_scraper():
 
     now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    for r in existing_records.values():
-        r["is_active"] = False
+    if not enrich_existing_only:
+        for r in existing_records.values():
+            r["is_active"] = False
 
-    try:
-        vyveska_html = fetch_html(URL_VYVESKA)
-        vyveska_items = parse_items_from_html(vyveska_html, "vyveska")
-        print(f"Nalezeno {len(vyveska_items)} parte na aktuální vývěsce.")
-    except Exception as e:
-        print(f"Chyba při stahování vývěsky: {e}")
-        vyveska_items = []
+        try:
+            vyveska_html = fetch_html(URL_VYVESKA)
+            vyveska_items = parse_items_from_html(vyveska_html, "vyveska")
+            print(f"Nalezeno {len(vyveska_items)} parte na aktuální vývěsce.")
+        except Exception as e:
+            print(f"Chyba při stahování vývěsky: {e}")
+            vyveska_items = []
 
-    try:
-        archiv_html = fetch_html(URL_ARCHIV)
-        archiv_items = parse_items_from_html(archiv_html, "archiv")
-        print(f"Nalezeno {len(archiv_items)} parte v archivu.")
-    except Exception as e:
-        print(f"Chyba při stahování archivu: {e}")
-        archiv_items = []
+        try:
+            archiv_html = fetch_html(URL_ARCHIV)
+            archiv_items = parse_items_from_html(archiv_html, "archiv")
+            print(f"Nalezeno {len(archiv_items)} parte v archivu.")
+        except Exception as e:
+            print(f"Chyba při stahování archivu: {e}")
+            archiv_items = []
 
-    all_found = []
-    for item in vyveska_items:
-        item["is_active"] = True
-        item["is_archived"] = False
-        all_found.append(item)
+        all_found = []
+        for item in vyveska_items:
+            item["is_active"] = True
+            item["is_archived"] = False
+            all_found.append(item)
 
-    for item in archiv_items:
-        item["is_active"] = False
-        item["is_archived"] = True
-        all_found.append(item)
+        for item in archiv_items:
+            item["is_active"] = False
+            item["is_archived"] = True
+            all_found.append(item)
 
-    new_downloads_count = 0
-
-    for item in all_found:
-        item_id = item["id"]
-        img_filename = item["filename"]
-        local_img_path = os.path.join(IMAGES_DIR, img_filename)
-        rel_img_path = f"images/{img_filename}"
-        
-        downloaded = download_image(item["image_url"], local_img_path)
-        if downloaded:
-            new_downloads_count += 1
+        for item in all_found:
+            item_id = item["id"]
+            img_filename = item["filename"]
+            local_img_path = os.path.join(IMAGES_DIR, img_filename)
+            rel_img_path = f"images/{img_filename}"
+            download_image(item["image_url"], local_img_path)
             
-        if item_id not in existing_records:
-            rec = {
-                "id": item_id,
-                "name": item["name"],
-                "category": item["category"],
-                "original_title": item["original_title"],
-                "is_active": item["is_active"],
-                "is_archived": item["is_archived"],
-                "image_url": item["image_url"],
-                "local_image_path": rel_img_path,
-                "first_seen": now_iso,
-                "last_seen": now_iso,
-                "age": "",
-                "death_date": "",
-                "residence": "",
-                "ceremony": "",
-                "raw_text": ""
-            }
-            if os.path.exists(local_img_path):
-                details = extract_details(local_img_path)
-                rec.update({
-                    "age": details.get("vek", ""),
-                    "death_date": details.get("datum_umrti", ""),
-                    "residence": details.get("misto_bydliste", ""),
-                    "ceremony": details.get("misto_obradu", ""),
-                    "raw_text": details.get("raw_text", "")
-                })
-            existing_records[item_id] = rec
-        else:
-            existing = existing_records[item_id]
-            if item["is_active"]:
-                existing["is_active"] = True
-            if item["is_archived"]:
-                existing["is_archived"] = True
-            existing["last_seen"] = now_iso
-            existing["local_image_path"] = rel_img_path
-            
-            if not existing.get("death_date") and os.path.exists(local_img_path):
-                details = extract_details(local_img_path)
-                if details.get("vek"): existing["age"] = details["vek"]
-                if details.get("datum_umrti"): existing["death_date"] = details["datum_umrti"]
-                if details.get("misto_bydliste"): existing["residence"] = details["misto_bydliste"]
-                if details.get("misto_obradu"): existing["ceremony"] = details["misto_obradu"]
-                if details.get("raw_text"): existing["raw_text"] = details["raw_text"]
+            if item_id not in existing_records:
+                existing_records[item_id] = {
+                    "id": item_id,
+                    "name": item["name"],
+                    "category": item["category"],
+                    "original_title": item["original_title"],
+                    "is_active": item["is_active"],
+                    "is_archived": item["is_archived"],
+                    "image_url": item["image_url"],
+                    "local_image_path": rel_img_path,
+                    "first_seen": now_iso,
+                    "last_seen": now_iso,
+                    "age": "",
+                    "death_date": "",
+                    "death_cause": "",
+                    "residence": "",
+                    "ceremony": "",
+                    "raw_text": ""
+                }
+            else:
+                existing = existing_records[item_id]
+                if item["is_active"]: existing["is_active"] = True
+                if item["is_archived"]: existing["is_archived"] = True
+                existing["last_seen"] = now_iso
+                existing["local_image_path"] = rel_img_path
+
+    # OCR obohacení pro všechny položky, kterým chybí detaily
+    print(f"\nSpouštím OCR rozpoznávání textu a údajů...")
+    enriched_count = 0
+    for item_id, item in existing_records.items():
+        item.setdefault("death_cause", "")
+        item.setdefault("residence", "")
+        item.setdefault("age", "")
+        item.setdefault("death_date", "")
+        item.setdefault("ceremony", "")
+        item.setdefault("raw_text", "")
+        fname = item.get("filename") or os.path.basename(item.get("local_image_path", "")) or f"{item_id}.jpg"
+        img_path = os.path.join(IMAGES_DIR, fname)
+        if os.path.exists(img_path):
+            ocr_text = run_ocr(img_path)
+            if ocr_text:
+                parsed = parse_parte_text(ocr_text, item.get("category", ""))
+                item["raw_text"] = parsed["raw_text"]
+                if parsed["residence"]: item["residence"] = parsed["residence"]
+                if parsed["age"]: item["age"] = parsed["age"]
+                if parsed["death_date"]: item["death_date"] = parsed["death_date"]
+                if parsed["death_cause"]: item["death_cause"] = parsed["death_cause"]
+                if parsed["ceremony"]: item["ceremony"] = parsed["ceremony"]
+                enriched_count += 1
+                print(f"  [{enriched_count}/{len(existing_records)}] {item['name']}: {item['residence']}, {item['age']}, {item['death_cause']}")
 
     save_databases(existing_records)
-    print(f"\nHotovo! Nově stažených obrázků: {new_downloads_count}. Celkem v databázi: {len(existing_records)}")
+    print(f"\nHotovo! Všechny záznamy ({len(existing_records)}) byly aktualizovány a uloženy.")
 
 if __name__ == "__main__":
-    run_scraper()
+    run_scraper(enrich_existing_only=True)

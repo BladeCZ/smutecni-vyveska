@@ -141,6 +141,10 @@ fun DetailScreen(
                         DetailItem(label = "Datum úmrtí", value = obituary.deathDate)
                     }
 
+                    if (!obituary.deathCause.isNullOrBlank()) {
+                        DetailItem(label = "Důvod / okolnost úmrtí", value = obituary.deathCause)
+                    }
+
                     if (!obituary.age.isNullOrBlank()) {
                         DetailItem(label = "Věk", value = obituary.age)
                     }

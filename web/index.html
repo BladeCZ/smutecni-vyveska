@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
     <title>Smuteční vývěska | PS Horníček</title>
-    <meta name="description" content="Přehled a archiv smutečních oznámení a vzpomínek Pohřební služby Horníček (Moravičany, Mohelnice a okolí)">
+    <meta name="description" content="Aktuální smuteční vývěska a oznámení pohřební služby Horníček (Moravičany, Mohelnice a okolí)">
     <meta name="theme-color" content="#1a1c23">
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -20,65 +20,108 @@
                 <span class="cross-icon">✝</span>
                 <div>
                     <h1>Smuteční vývěska</h1>
-                    <p class="subtitle">PS Horníček • Moravičany, Mohelnice a okolí</p>
+                    <p class="subtitle">PS Horníček • Moravičany, Mohelnice, Loštice a okolí</p>
                 </div>
             </div>
             <div class="header-actions">
                 <button id="refreshBtn" class="icon-btn" title="Aktualizovat data" aria-label="Aktualizovat">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
                     </svg>
                 </button>
             </div>
         </div>
 
+        <!-- Přepínač zobrazení: Výchozí je POUZE aktuální vývěska -->
+        <div class="nav-tabs">
+            <button class="nav-tab active" data-tab="active">
+                <span class="tab-indicator"></span>
+                <span>Aktuální vývěska</span>
+                <span class="tab-count" id="countActive">0</span>
+            </button>
+            <button class="nav-tab" data-tab="archive">
+                <span>Archiv parte</span>
+                <span class="tab-count" id="countArchive">0</span>
+            </button>
+        </div>
+
         <div class="search-container">
             <div class="search-box">
-                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"></circle>
                     <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                 </svg>
-                <input type="search" id="searchInput" placeholder="Hledat jméno, obec, rok..." autocomplete="off">
+                <input type="search" id="searchInput" placeholder="Hledat jméno, město, věk, rok..." autocomplete="off">
                 <button id="clearSearch" class="clear-btn" aria-label="Vymazat hledání">&times;</button>
             </div>
-        </div>
-
-        <div class="filter-chips">
-            <button class="chip active" data-filter="all">Vše (<span id="countAll">0</span>)</button>
-            <button class="chip" data-filter="active">Aktuální vývěska (<span id="countActive">0</span>)</button>
-            <button class="chip" data-filter="announcement">Smuteční oznámení (<span id="countAnnounce">0</span>)</button>
-            <button class="chip" data-filter="memory">Vzpomínky (<span id="countMemory">0</span>)</button>
-            <button class="chip" data-filter="archive">Archiv (<span id="countArchive">0</span>)</button>
         </div>
     </header>
 
     <main class="main-content">
-        <div id="statsBar" class="stats-bar">
-            Načítám parte z databáze...
+        <div class="content-header">
+            <div class="content-title-wrap">
+                <h2 id="sectionTitle">Aktuální smuteční oznámení</h2>
+                <span id="statsBadge" class="stats-badge">Načítám...</span>
+            </div>
+            <div class="download-csv-wrap">
+                <a href="data/database.csv" download="smutecni_vyveska.csv" class="csv-link" title="Stáhnout tabulku pro Excel">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span>Export do Excelu (CSV)</span>
+                </a>
+            </div>
         </div>
 
-        <div id="cardsGrid" class="cards-grid">
-            <!-- Dynamicky generované karty parte -->
+        <!-- Tabulka s přehlednými sloupci (Desktop/Tablet) -->
+        <div class="table-responsive">
+            <table class="obituary-table">
+                <thead>
+                    <tr>
+                        <th class="th-name">Jméno a Příjmení</th>
+                        <th class="th-residence">Město / Bydliště</th>
+                        <th class="th-age">Věk</th>
+                        <th class="th-date">Datum úmrtí</th>
+                        <th class="th-cause">Důvod / Okolnost</th>
+                        <th class="th-ceremony">Poslední rozloučení (pohřeb)</th>
+                        <th class="th-action text-right">Parte</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Dynamicky generované řádky -->
+                </tbody>
+            </table>
         </div>
 
+        <!-- Mobilní karty (Mobile View) -->
+        <div id="mobileCards" class="mobile-cards">
+            <!-- Dynamicky generované karty pro telefony -->
+        </div>
+
+        <!-- Prázdný stav -->
         <div id="emptyState" class="empty-state" style="display: none;">
-            <p class="empty-title">Nebylo nalezeno žádné parte</p>
-            <p class="empty-desc">Zkuste upravit vyhledávací dotaz nebo vybrat jiný filtr.</p>
+            <p class="empty-title">Nenalezeny žádné záznamy</p>
+            <p class="empty-desc">Zkuste upravit vyhledávací dotaz nebo přepnout na archiv parte.</p>
         </div>
     </main>
 
-    <!-- Modal pro zobrazení celého parte s přiblížením -->
+    <!-- Modal pro zobrazení celého originálního parte -->
     <div id="imageModal" class="modal" role="dialog" aria-hidden="true">
         <div class="modal-backdrop"></div>
         <div class="modal-container">
             <div class="modal-header">
                 <div class="modal-title-wrap">
-                    <h2 id="modalTitle">Parte</h2>
+                    <div class="modal-heading">
+                        <h2 id="modalTitle">Jméno Příjmení</h2>
+                        <span id="modalTownSubtitle" class="modal-town-subtitle">📍 Město</span>
+                    </div>
                     <span id="modalCategory" class="badge">Oznámení</span>
                 </div>
                 <div class="modal-actions">
                     <button id="modalShareBtn" class="action-btn" title="Sdílet parte">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <circle cx="18" cy="5" r="3"></circle>
                             <circle cx="6" cy="12" r="3"></circle>
                             <circle cx="18" cy="19" r="3"></circle>
@@ -88,7 +131,7 @@
                         <span>Sdílet</span>
                     </button>
                     <a id="modalDownloadLink" class="action-btn" download target="_blank" title="Stáhnout obrázek">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                             <polyline points="7 10 12 15 17 10"></polyline>
                             <line x1="12" y1="15" x2="12" y2="3"></line>
@@ -104,14 +147,14 @@
                     <img id="modalImg" src="" alt="Smuteční parte" loading="lazy">
                 </div>
                 <div id="modalDetails" class="modal-details">
-                    <!-- Detaily z OCR -->
+                    <!-- Detaily z databáze -->
                 </div>
             </div>
         </div>
     </div>
 
     <footer class="app-footer">
-        <p>Data z <a href="https://www.pshornicek.cz" target="_blank" rel="noopener">Pohřební služba Horníček</a> | Zálohováno a hostováno na GitHubu</p>
+        <p>Data z webu <a href="https://www.pshornicek.cz/c-m-s-page/smutecni-vyveska" target="_blank" rel="noopener">Pohřební služba Horníček</a> | Zálohováno a hostováno na GitHubu</p>
     </footer>
 
     <script src="app.js"></script>

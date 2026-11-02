@@ -13,6 +13,7 @@ data class Obituary(
     @SerializedName("local_image_path") val localImagePath: String? = null,
     val age: String? = null,
     @SerializedName("death_date") val deathDate: String? = null,
+    @SerializedName("death_cause") val deathCause: String? = null,
     val residence: String? = null,
     val ceremony: String? = null,
     @SerializedName("raw_text") val rawText: String? = null,
