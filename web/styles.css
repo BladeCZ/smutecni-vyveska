@@ -1,26 +1,22 @@
 :root {
-    --bg-primary: #0d0f14;
-    --bg-surface: #161922;
-    --bg-surface-elevated: #1f2330;
-    --bg-surface-hover: #262c3d;
-    --border-color: #2b3244;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
-    --accent: #d97706; /* dignified gold */
-    --accent-hover: #f59e0b;
-    --accent-bg: rgba(217, 119, 6, 0.12);
-    --badge-announcement: #334155;
-    --badge-announcement-text: #e2e8f0;
-    --badge-memory: #78350f;
-    --badge-memory-text: #fef08a;
-    --badge-active: #064e3b;
-    --badge-active-text: #6ee7b7;
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 16px;
-    --shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
-    --transition: all 0.2s ease;
+    --bg-main: #0c0e12;
+    --bg-header: #141720;
+    --bg-card: #1a1e29;
+    --bg-row-alt: #161922;
+    --bg-row-hover: #222736;
+    --border-color: #2a3142;
+    --border-light: #374158;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --text-dim: #64748b;
+    --gold: #d97706;
+    --gold-light: #fbbf24;
+    --gold-bg: rgba(217, 119, 6, 0.15);
+    --badge-gray: #334155;
+    --badge-gray-text: #e2e8f0;
+    --badge-gold: #78350f;
+    --badge-gold-text: #fef08a;
+    --radius: 8px;
 }
 
 * {
@@ -31,8 +27,8 @@
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    background-color: var(--bg-primary);
-    color: var(--text-primary);
+    background-color: var(--bg-main);
+    color: var(--text-main);
     line-height: 1.5;
     min-height: 100vh;
     display: flex;
@@ -41,17 +37,16 @@ body {
 
 /* Header */
 .app-header {
-    background-color: rgba(22, 25, 34, 0.96);
+    background-color: var(--bg-header);
     border-bottom: 1px solid var(--border-color);
     position: sticky;
     top: 0;
-    z-index: 100;
-    backdrop-filter: blur(12px);
-    padding: 1rem 1rem 0.5rem;
+    z-index: 50;
+    padding: 0.85rem 1rem 0.5rem;
 }
 
 .header-inner {
-    max-width: 1280px;
+    max-width: 1350px;
     margin: 0 auto;
     display: flex;
     justify-content: space-between;
@@ -62,48 +57,48 @@ body {
 .header-brand {
     display: flex;
     align-items: center;
-    gap: 0.85rem;
+    gap: 0.75rem;
 }
 
 .cross-icon {
     font-size: 1.85rem;
-    color: var(--accent);
+    color: var(--gold);
     line-height: 1;
 }
 
 .header-brand h1 {
     font-size: 1.3rem;
     font-weight: 700;
-    letter-spacing: -0.02em;
 }
 
 .subtitle {
-    font-size: 0.825rem;
-    color: var(--text-secondary);
+    font-size: 0.8rem;
+    color: var(--text-muted);
 }
 
-.icon-btn {
-    background: transparent;
+.refresh-btn {
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    border-radius: var(--radius-sm);
-    padding: 0.5rem;
+    color: var(--text-muted);
+    padding: 0.45rem 0.85rem;
+    border-radius: var(--radius);
     cursor: pointer;
     display: flex;
     align-items: center;
-    justify-content: center;
-    transition: var(--transition);
+    gap: 0.4rem;
+    font-size: 0.825rem;
+    font-weight: 600;
+    transition: all 0.2s;
 }
 
-.icon-btn:hover {
-    color: var(--text-primary);
-    background: var(--bg-surface-elevated);
-    border-color: var(--accent);
+.refresh-btn:hover {
+    color: var(--text-main);
+    border-color: var(--gold);
 }
 
-/* Nav Tabs: Aktuální vývěska vs Archiv */
+/* Záložky */
 .nav-tabs {
-    max-width: 1280px;
+    max-width: 1350px;
     margin: 0 auto;
     display: flex;
     gap: 0.5rem;
@@ -113,78 +108,79 @@ body {
 
 .nav-tab {
     background: transparent;
-    border: none;
-    color: var(--text-secondary);
+    border: 1px solid transparent;
+    color: var(--text-muted);
     padding: 0.5rem 1rem;
-    font-size: 0.95rem;
+    font-size: 0.925rem;
     font-weight: 600;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius);
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    transition: var(--transition);
+    transition: all 0.2s;
 }
 
 .nav-tab:hover {
-    color: var(--text-primary);
-    background: var(--bg-surface-elevated);
+    color: var(--text-main);
+    background: var(--bg-card);
 }
 
 .nav-tab.active {
-    color: var(--accent);
-    background: var(--accent-bg);
+    background: var(--gold-bg);
+    color: var(--gold-light);
+    border-color: rgba(217, 119, 6, 0.4);
 }
 
-.tab-count {
-    background: var(--bg-surface-elevated);
-    color: var(--text-secondary);
+.tab-badge {
+    background: var(--bg-card);
+    color: var(--text-muted);
     font-size: 0.75rem;
-    font-weight: 700;
     padding: 0.15rem 0.5rem;
     border-radius: 9999px;
+    font-weight: 700;
 }
 
-.nav-tab.active .tab-count {
-    background: var(--accent);
+.nav-tab.active .tab-badge {
+    background: var(--gold);
     color: #fff;
 }
 
-/* Search Box */
-.search-container {
-    max-width: 1280px;
-    margin: 0.75rem auto 0.25rem;
+/* Vyhledávání */
+.search-bar-wrap {
+    max-width: 1350px;
+    margin: 0.65rem auto 0.25rem;
 }
 
 .search-box {
     position: relative;
     display: flex;
     align-items: center;
-    background: var(--bg-surface-elevated);
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    transition: var(--transition);
+    border-radius: var(--radius);
+    transition: border-color 0.2s;
 }
 
 .search-box:focus-within {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.25);
 }
 
 .search-icon {
     position: absolute;
-    left: 1rem;
-    color: var(--text-muted);
+    left: 0.85rem;
+    font-size: 0.95rem;
 }
 
 .search-box input {
     width: 100%;
-    padding: 0.75rem 2.5rem 0.75rem 2.75rem;
+    padding: 0.7rem 2.25rem 0.7rem 2.6rem;
     background: transparent;
     border: none;
     outline: none;
-    color: var(--text-primary);
-    font-size: 0.95rem;
+    color: var(--text-main);
+    font-size: 0.925rem;
 }
 
 .clear-btn {
@@ -202,317 +198,205 @@ body {
     display: block;
 }
 
-/* Main Content */
+/* Hlavní obsah */
 .main-content {
     flex: 1;
-    max-width: 1280px;
+    max-width: 1350px;
     width: 100%;
     margin: 0 auto;
-    padding: 1.5rem 1rem;
+    padding: 1.25rem 1rem 2.5rem;
 }
 
-.content-header {
+.table-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
     flex-wrap: wrap;
     gap: 0.75rem;
 }
 
-.content-title-wrap {
+.table-title {
     display: flex;
     align-items: center;
     gap: 0.75rem;
 }
 
-.content-title-wrap h2 {
-    font-size: 1.35rem;
+.table-title h2 {
+    font-size: 1.3rem;
     font-weight: 700;
-    letter-spacing: -0.01em;
 }
 
-.stats-badge {
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    background: var(--bg-surface-elevated);
-    padding: 0.25rem 0.65rem;
-    border-radius: 9999px;
+.stats-counter {
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
 }
 
-.csv-link {
+.btn-csv {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
     font-size: 0.825rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: var(--radius);
     text-decoration: none;
-    padding: 0.4rem 0.75rem;
-    background: var(--bg-surface);
+    transition: all 0.2s;
+}
+
+.btn-csv:hover {
+    color: var(--gold-light);
+    border-color: var(--gold);
+}
+
+/* ==================== NORMAL TABLE (STANDARDNÍ TABULKA) ==================== */
+.table-container {
+    background: var(--bg-card);
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-sm);
-    transition: var(--transition);
+    border-radius: var(--radius);
+    overflow-x: auto;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
-.csv-link:hover {
-    color: var(--accent);
-    border-color: var(--accent);
-}
-
-/* ==================== TABULKA (Desktop / Tablet) ==================== */
-.table-responsive {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-.obituary-table {
+.data-table {
     width: 100%;
     border-collapse: collapse;
-    text-align: left;
     font-size: 0.925rem;
+    text-align: left;
 }
 
-.obituary-table th {
-    background: var(--bg-surface-elevated);
-    color: var(--text-secondary);
+.data-table thead th {
+    background: #11141c;
+    color: #cbd5e1;
     font-size: 0.775rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    padding: 0.85rem 1rem;
-    border-bottom: 1px solid var(--border-color);
+    padding: 0.9rem 1rem;
+    border-bottom: 2px solid var(--border-light);
     white-space: nowrap;
 }
 
-.obituary-table td {
-    padding: 1rem;
+.data-table tbody tr {
     border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.15s ease;
+}
+
+.data-table tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.015);
+}
+
+.data-table tbody tr:hover {
+    background-color: var(--bg-row-hover);
+}
+
+.data-table td {
+    padding: 0.95rem 1rem;
     vertical-align: middle;
 }
 
-.obituary-table tbody tr {
-    transition: background-color 0.15s ease;
-    cursor: pointer;
+/* Formátování buněk */
+.cell-name-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
 }
 
-.obituary-table tbody tr:hover {
-    background-color: var(--bg-surface-hover);
-}
-
-.obituary-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-/* Sloupce */
-.td-name {
-    min-width: 200px;
-}
-
-.person-name {
+.cell-name {
     font-size: 1.05rem;
     font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1.25;
+    color: var(--text-main);
 }
 
-.person-sub {
+.cell-sub {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.25rem;
+    gap: 0.45rem;
     font-size: 0.825rem;
 }
 
-.town-inline {
-    color: var(--accent);
-    font-weight: 500;
-}
-
-.td-residence {
-    color: var(--text-primary);
+.cell-town-under-name {
+    color: var(--gold-light);
     font-weight: 600;
-    white-space: nowrap;
 }
 
-.td-age {
-    color: var(--text-primary);
+.cell-town {
     font-weight: 600;
+    color: #f1f5f9;
+}
+
+.cell-age {
+    font-weight: 600;
+    color: #f1f5f9;
     white-space: nowrap;
 }
 
-.td-date {
-    color: var(--text-secondary);
+.cell-date {
+    color: var(--text-muted);
     white-space: nowrap;
 }
 
-.td-cause {
-    color: var(--text-secondary);
+.cell-cause {
+    color: #cbd5e1;
     font-size: 0.875rem;
 }
 
-.td-ceremony {
-    color: var(--text-secondary);
+.cell-ceremony {
+    color: #cbd5e1;
     font-size: 0.875rem;
-    max-width: 300px;
-    line-height: 1.4;
+    line-height: 1.35;
+    max-width: 320px;
 }
 
-.text-right {
-    text-align: right;
-}
-
-/* Tlačítko Detail / Parte v tabulce */
-.btn-detail {
+/* Tlačítko Detail parte v tabulce */
+.btn-open-parte {
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    background: var(--accent-bg);
-    color: var(--accent);
-    border: 1px solid var(--accent);
+    gap: 0.35rem;
+    background: var(--gold-bg);
+    color: var(--gold-light);
+    border: 1px solid var(--gold);
     padding: 0.45rem 0.85rem;
-    border-radius: var(--radius-sm);
+    border-radius: 6px;
     font-size: 0.825rem;
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
-    transition: var(--transition);
+    transition: all 0.2s;
 }
 
-.btn-detail:hover {
-    background: var(--accent);
+.btn-open-parte:hover {
+    background: var(--gold);
     color: #fff;
-    box-shadow: 0 0 12px rgba(217, 119, 6, 0.4);
+    box-shadow: 0 0 10px rgba(217, 119, 6, 0.4);
 }
 
-/* Badges */
+/* Kategorie badge */
 .badge {
     font-size: 0.7rem;
     font-weight: 600;
     padding: 0.15rem 0.45rem;
-    border-radius: var(--radius-sm);
+    border-radius: 4px;
     text-transform: uppercase;
-    letter-spacing: 0.03em;
-    display: inline-block;
 }
 
 .badge-announcement {
-    background: var(--badge-announcement);
-    color: var(--badge-announcement-text);
+    background: var(--badge-gray);
+    color: var(--badge-gray-text);
 }
 
 .badge-memory {
-    background: var(--badge-memory);
-    color: var(--badge-memory-text);
+    background: var(--badge-gold);
+    color: var(--badge-gold-text);
 }
 
-/* ==================== MOBILNÍ KARTY (Mobile View) ==================== */
-.mobile-cards {
-    display: none;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.mobile-card {
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    padding: 1.15rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    cursor: pointer;
-}
-
-.mobile-card:hover {
-    border-color: var(--accent);
-}
-
-.mobile-card-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 0.5rem;
-}
-
-.mobile-card-name {
-    font-size: 1.2rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    line-height: 1.2;
-}
-
-.mobile-card-town {
-    color: var(--accent);
-    font-size: 0.95rem;
-    font-weight: 600;
-    margin-top: 0.2rem;
-}
-
-.mobile-card-info-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.6rem 0.85rem;
-    background: var(--bg-surface-elevated);
-    padding: 0.75rem 0.85rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.85rem;
-}
-
-.mobile-card-info-item {
-    display: flex;
-    flex-direction: column;
-}
-
-.info-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    color: var(--text-muted);
-    font-weight: 700;
-}
-
-.info-val {
-    color: var(--text-primary);
-    font-weight: 500;
-    margin-top: 0.1rem;
-}
-
-.mobile-card-ceremony {
-    font-size: 0.85rem;
-    color: var(--text-secondary);
-    line-height: 1.4;
-}
-
-.mobile-card-ceremony strong {
-    color: var(--text-primary);
-    display: block;
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    margin-bottom: 0.15rem;
-}
-
-.btn-detail-mobile {
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0.4rem;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    padding: 0.65rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.9rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 0.25rem;
-}
-
-/* ==================== MODAL / LIGHTBOX ==================== */
+/* ==================== MODAL OKNO S OBRÁZKEM PARTE ==================== */
 .modal {
     position: fixed;
     inset: 0;
@@ -534,18 +418,18 @@ body {
     backdrop-filter: blur(8px);
 }
 
-.modal-container {
+.modal-box {
     position: relative;
-    background: var(--bg-surface);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
     width: 100%;
-    max-width: 960px;
+    max-width: 920px;
     max-height: 94vh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    box-shadow: var(--shadow);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7);
 }
 
 .modal-header {
@@ -554,86 +438,80 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--bg-surface-elevated);
+    background: #12151d;
 }
 
-.modal-title-wrap {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-}
-
-.modal-heading h2 {
+.modal-header h2 {
     font-size: 1.25rem;
     font-weight: 700;
 }
 
-.modal-town-subtitle {
-    font-size: 0.85rem;
-    color: var(--accent);
+.modal-subtitle {
+    font-size: 0.875rem;
+    color: var(--gold-light);
     font-weight: 600;
 }
 
-.modal-actions {
+.modal-btn-group {
     display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
-.action-btn {
+.modal-action-btn {
     display: flex;
     align-items: center;
     gap: 0.35rem;
-    background: var(--bg-surface);
+    background: var(--bg-main);
     border: 1px solid var(--border-color);
-    color: var(--text-primary);
+    color: var(--text-main);
     padding: 0.45rem 0.75rem;
-    border-radius: var(--radius-sm);
+    border-radius: 6px;
     font-size: 0.825rem;
     text-decoration: none;
     cursor: pointer;
-    transition: var(--transition);
+    transition: all 0.2s;
 }
 
-.action-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
+.modal-action-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold-light);
 }
 
-.close-modal-btn {
+.modal-close {
     background: none;
     border: none;
-    color: var(--text-secondary);
-    font-size: 1.85rem;
+    color: var(--text-muted);
+    font-size: 1.75rem;
     cursor: pointer;
     padding: 0 0.5rem;
     line-height: 1;
 }
 
-.close-modal-btn:hover {
-    color: var(--text-primary);
+.modal-close:hover {
+    color: var(--text-main);
 }
 
-.modal-body {
+.modal-content {
     padding: 1.25rem;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 1.25rem;
+    gap: 1rem;
     align-items: center;
 }
 
-.image-wrapper {
+.parte-image-wrap {
     width: 100%;
-    max-height: 62vh;
+    max-height: 64vh;
     display: flex;
     justify-content: center;
     background: #000;
-    border-radius: var(--radius-sm);
+    border-radius: 6px;
     overflow: auto;
 }
 
-.image-wrapper img {
+.parte-image-wrap img {
     max-width: 100%;
     height: auto;
     object-fit: contain;
@@ -641,28 +519,30 @@ body {
     transition: transform 0.2s ease;
 }
 
-.image-wrapper img.zoomed {
+.parte-image-wrap img.zoomed {
     max-width: none;
     cursor: zoom-out;
     transform: scale(1.6);
 }
 
-.modal-details {
+.parte-meta-grid {
     width: 100%;
-    background: var(--bg-surface-elevated);
+    background: #12151d;
     border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
+    border-radius: 8px;
     padding: 1rem;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0.85rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.75rem;
+    font-size: 0.875rem;
 }
 
-.detail-row strong {
-    color: var(--text-muted);
+.meta-field strong {
     display: block;
     font-size: 0.725rem;
     text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 0.15rem;
 }
 
 .empty-state {
@@ -672,32 +552,22 @@ body {
 }
 
 .empty-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-    margin-bottom: 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 0.35rem;
 }
 
 .app-footer {
     text-align: center;
     padding: 1.5rem;
-    font-size: 0.825rem;
-    color: var(--text-muted);
+    font-size: 0.8rem;
+    color: var(--text-dim);
     border-top: 1px solid var(--border-color);
     margin-top: auto;
 }
 
 .app-footer a {
-    color: var(--accent);
+    color: var(--gold);
     text-decoration: none;
-}
-
-/* ==================== RESPONZIVITA ==================== */
-@media (max-width: 900px) {
-    .table-responsive {
-        display: none;
-    }
-    .mobile-cards {
-        display: flex;
-    }
 }

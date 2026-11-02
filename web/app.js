@@ -1,15 +1,14 @@
-// Smuteční vývěska - Web & PWA Client
+// Smuteční vývěska - Klientská aplikace
 let allItems = [];
-let currentTab = 'active'; // VÝCHOZÍ JE POUZE AKTUÁLNÍ VÝVĚSKA
+let currentTab = 'active'; // VÝCHOZÍ JE VÝHRADNĚ AKTUÁLNÍ VÝVĚSKA
 let currentSearch = '';
 let activeModalItem = null;
 
-// DOM elementy
+// DOM prvky
 const searchInput = document.getElementById('searchInput');
 const clearSearchBtn = document.getElementById('clearSearch');
 const navTabs = document.querySelectorAll('.nav-tab');
 const tableBody = document.getElementById('tableBody');
-const mobileCards = document.getElementById('mobileCards');
 const sectionTitle = document.getElementById('sectionTitle');
 const statsBadge = document.getElementById('statsBadge');
 const emptyState = document.getElementById('emptyState');
@@ -19,30 +18,30 @@ const refreshBtn = document.getElementById('refreshBtn');
 const countActive = document.getElementById('countActive');
 const countArchive = document.getElementById('countArchive');
 
-// Modal elementy
+// Modal prvky
 const modal = document.getElementById('imageModal');
 const modalTitle = document.getElementById('modalTitle');
 const modalTownSubtitle = document.getElementById('modalTownSubtitle');
-const modalCategory = document.getElementById('modalCategory');
 const modalImg = document.getElementById('modalImg');
 const modalDetails = document.getElementById('modalDetails');
 const modalCloseBtn = document.getElementById('modalCloseBtn');
-const modalBackdrop = document.querySelector('.modal-backdrop');
+const modalBackdrop = document.getElementById('modalBackdrop');
 const modalShareBtn = document.getElementById('modalShareBtn');
 const modalDownloadLink = document.getElementById('modalDownloadLink');
 
+// Načtení databáze
 async function fetchDatabase() {
-    statsBadge.textContent = 'Načítám...';
+    statsBadge.textContent = 'Načítám data...';
     const candidateUrls = [
         'data/database.json',
-        '../data/database.json',
-        './database.json'
+        './data/database.json',
+        '../data/database.json'
     ];
 
     let loadedData = null;
     for (const url of candidateUrls) {
         try {
-            const resp = await fetch(url + '?t=' + Date.now());
+            const resp = await fetch(url + '?nocache=' + Date.now());
             if (resp.ok) {
                 loadedData = await resp.json();
                 break;
@@ -53,7 +52,7 @@ async function fetchDatabase() {
     if (loadedData) {
         allItems = loadedData;
         updateCounts();
-        render();
+        renderTable();
     } else {
         statsBadge.textContent = 'Chyba při načítání databáze';
     }
@@ -89,13 +88,13 @@ function getFilteredItems() {
     });
 }
 
-function render() {
+// Vykreslení standardní tabulky
+function renderTable() {
     const items = getFilteredItems();
     tableBody.innerHTML = '';
-    mobileCards.innerHTML = '';
 
     const isCurrentActive = currentTab === 'active';
-    sectionTitle.textContent = isCurrentActive ? 'Aktuální smuteční oznámení (Vývěska)' : 'Archiv smutečních oznámení';
+    sectionTitle.textContent = isCurrentActive ? 'Aktuální smuteční oznámení (Vývěska)' : 'Archiv parte';
     statsBadge.textContent = `${items.length} ${getNoun(items.length, 'parte', 'parte', 'parte')}`;
 
     if (items.length === 0) {
@@ -110,117 +109,67 @@ function render() {
         const isMemory = item.category === 'Vzpomínka';
         const badgeClass = isMemory ? 'badge-memory' : 'badge-announcement';
 
-        const residenceText = item.residence ? item.residence : '-';
-        const ageText = item.age ? item.age : '-';
-        const dateText = item.death_date ? item.death_date : '-';
-        const causeText = item.death_cause ? item.death_cause : '-';
-        const ceremonyText = item.ceremony ? item.ceremony : '-';
+        const residenceText = item.residence ? item.residence : '–';
+        const ageText = item.age ? item.age : '–';
+        const dateText = item.death_date ? item.death_date : '–';
+        const causeText = item.death_cause ? item.death_cause : '–';
+        const ceremonyText = item.ceremony ? item.ceremony : '–';
 
-        // 1. ŘÁDEK TABULKY (Desktop / Tablet)
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td class="td-name">
-                <div class="person-name">${escapeHtml(item.name)}</div>
-                <div class="person-sub">
-                    <span class="badge ${badgeClass}">${escapeHtml(item.category)}</span>
-                    ${item.residence ? `<span class="town-inline">📍 ${escapeHtml(item.residence)}</span>` : ''}
+            <td>
+                <div class="cell-name-box">
+                    <span class="cell-name">${escapeHtml(item.name)}</span>
+                    <div class="cell-sub">
+                        <span class="badge ${badgeClass}">${escapeHtml(item.category)}</span>
+                        ${item.residence ? `<span class="cell-town-under-name">📍 ${escapeHtml(item.residence)}</span>` : ''}
+                    </div>
                 </div>
             </td>
-            <td class="td-residence">${escapeHtml(residenceText)}</td>
-            <td class="td-age">${escapeHtml(ageText)}</td>
-            <td class="td-date">${escapeHtml(dateText)}</td>
-            <td class="td-cause">${escapeHtml(causeText)}</td>
-            <td class="td-ceremony">${escapeHtml(ceremonyText)}</td>
-            <td class="text-right">
-                <button class="btn-detail" title="Zobrazit celé parte">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                        <circle cx="12" cy="12" r="3"></circle>
-                    </svg>
-                    <span>Detail</span>
+            <td class="cell-town">${escapeHtml(residenceText)}</td>
+            <td class="cell-age">${escapeHtml(ageText)}</td>
+            <td class="cell-date">${escapeHtml(dateText)}</td>
+            <td class="cell-cause">${escapeHtml(causeText)}</td>
+            <td class="cell-ceremony">${escapeHtml(ceremonyText)}</td>
+            <td style="text-align: center;">
+                <button class="btn-open-parte" title="Zobrazit celé parte">
+                    <span>📄 Detail</span>
                 </button>
             </td>
         `;
 
         tr.addEventListener('click', () => openModal(item, imgSrc));
         tableBody.appendChild(tr);
-
-        // 2. KARTA PRO MOBIL (Mobile View)
-        const card = document.createElement('div');
-        card.className = 'mobile-card';
-        card.innerHTML = `
-            <div class="mobile-card-top">
-                <div>
-                    <div class="mobile-card-name">${escapeHtml(item.name)}</div>
-                    ${item.residence ? `<div class="mobile-card-town">📍 ${escapeHtml(item.residence)}</div>` : ''}
-                </div>
-                <span class="badge ${badgeClass}">${escapeHtml(item.category)}</span>
-            </div>
-
-            <div class="mobile-card-info-grid">
-                <div class="mobile-card-info-item">
-                    <span class="info-label">Věk</span>
-                    <span class="info-val">${escapeHtml(ageText)}</span>
-                </div>
-                <div class="mobile-card-info-item">
-                    <span class="info-label">Datum úmrtí</span>
-                    <span class="info-val">${escapeHtml(dateText)}</span>
-                </div>
-                <div class="mobile-card-info-item" style="grid-column: span 2;">
-                    <span class="info-label">Důvod / Okolnost</span>
-                    <span class="info-val">${escapeHtml(causeText)}</span>
-                </div>
-            </div>
-
-            <div class="mobile-card-ceremony">
-                <strong>Poslední rozloučení / Pohřeb:</strong>
-                <span>${escapeHtml(ceremonyText)}</span>
-            </div>
-
-            <button class="btn-detail-mobile">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                    <circle cx="12" cy="12" r="3"></circle>
-                </svg>
-                <span>Otevřít obrázek parte</span>
-            </button>
-        `;
-
-        card.addEventListener('click', () => openModal(item, imgSrc));
-        mobileCards.appendChild(card);
     });
 }
 
 function openModal(item, imgSrc) {
     activeModalItem = item;
     modalTitle.textContent = item.name;
-    modalTownSubtitle.textContent = item.residence ? `📍 ${item.residence}` : '';
-    modalCategory.textContent = item.category;
-    modalCategory.className = `badge ${item.category === 'Vzpomínka' ? 'badge-memory' : 'badge-announcement'}`;
+    modalTownSubtitle.textContent = item.residence ? `📍 Bydliště: ${item.residence} (${item.category})` : item.category;
     
     modalImg.src = imgSrc;
     modalImg.classList.remove('zoomed');
     modalDownloadLink.href = imgSrc;
     modalDownloadLink.download = `parte_${sanitizeFilename(item.name)}.jpg`;
 
-    // Sestavení detailů
     let detailsHtml = '';
     if (item.residence) {
-        detailsHtml += `<div class="detail-row"><strong>Město / Bydliště:</strong> ${escapeHtml(item.residence)}</div>`;
+        detailsHtml += `<div class="meta-field"><strong>Město / Bydliště:</strong> ${escapeHtml(item.residence)}</div>`;
     }
     if (item.age) {
-        detailsHtml += `<div class="detail-row"><strong>Věk:</strong> ${escapeHtml(item.age)}</div>`;
+        detailsHtml += `<div class="meta-field"><strong>Věk:</strong> ${escapeHtml(item.age)}</div>`;
     }
     if (item.death_date) {
-        detailsHtml += `<div class="detail-row"><strong>Datum úmrtí:</strong> ${escapeHtml(item.death_date)}</div>`;
+        detailsHtml += `<div class="meta-field"><strong>Datum úmrtí:</strong> ${escapeHtml(item.death_date)}</div>`;
     }
     if (item.death_cause) {
-        detailsHtml += `<div class="detail-row"><strong>Důvod úmrtí:</strong> ${escapeHtml(item.death_cause)}</div>`;
+        detailsHtml += `<div class="meta-field"><strong>Důvod / Okolnost:</strong> ${escapeHtml(item.death_cause)}</div>`;
     }
     if (item.ceremony) {
-        detailsHtml += `<div class="detail-row" style="grid-column: span 2;"><strong>Poslední rozloučení:</strong> ${escapeHtml(item.ceremony)}</div>`;
+        detailsHtml += `<div class="meta-field" style="grid-column: span 2;"><strong>Poslední rozloučení:</strong> ${escapeHtml(item.ceremony)}</div>`;
     }
-    detailsHtml += `<div class="detail-row" style="grid-column: span 2;"><strong>Odkaz:</strong> <a href="${item.image_url}" target="_blank" rel="noopener" style="color:var(--accent);">Otevřít původní parte na webu PS Horníček ↗</a></div>`;
+    detailsHtml += `<div class="meta-field" style="grid-column: span 2;"><strong>Původní odkaz:</strong> <a href="${item.image_url}" target="_blank" rel="noopener" style="color:var(--gold-light);">Otevřít originál na pshornicek.cz ↗</a></div>`;
 
     modalDetails.innerHTML = detailsHtml;
     modal.classList.add('active');
@@ -234,61 +183,54 @@ function closeModal() {
     activeModalItem = null;
 }
 
-// Zvětšení obrázku kliknutím v modalu
 modalImg.addEventListener('click', () => {
     modalImg.classList.toggle('zoomed');
 });
 
-// Zavření modalu
 modalCloseBtn.addEventListener('click', closeModal);
 modalBackdrop.addEventListener('click', closeModal);
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeModal();
 });
 
-// Sdílení
 modalShareBtn.addEventListener('click', async () => {
     if (!activeModalItem) return;
     const shareData = {
         title: `Parte - ${activeModalItem.name}`,
-        text: `Parte: ${activeModalItem.name} (${activeModalItem.residence || ''})\nDatum: ${activeModalItem.death_date || ''}\nPohřeb: ${activeModalItem.ceremony || ''}`,
+        text: `Parte: ${activeModalItem.name} (${activeModalItem.residence || ''})\nDatum úmrtí: ${activeModalItem.death_date || ''}\nPohřeb: ${activeModalItem.ceremony || ''}`,
         url: window.location.href
     };
 
     if (navigator.share) {
         try {
             await navigator.share(shareData);
-        } catch (err) {
-            if (err.name !== 'AbortError') console.error('Share failed:', err);
-        }
+        } catch (err) {}
     } else {
         navigator.clipboard.writeText(window.location.href);
         alert('Odkaz na parte byl zkopírován do schránky.');
     }
 });
 
-// Přepínání záložek
 navTabs.forEach(tab => {
     tab.addEventListener('click', () => {
         navTabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         currentTab = tab.dataset.tab;
-        render();
+        renderTable();
     });
 });
 
-// Vyhledávání
 searchInput.addEventListener('input', (e) => {
     currentSearch = e.target.value.trim();
     clearSearchBtn.classList.toggle('visible', currentSearch.length > 0);
-    render();
+    renderTable();
 });
 
 clearSearchBtn.addEventListener('click', () => {
     searchInput.value = '';
     currentSearch = '';
     clearSearchBtn.classList.remove('visible');
-    render();
+    renderTable();
 });
 
 refreshBtn.addEventListener('click', fetchDatabase);
@@ -316,12 +258,16 @@ function getNoun(number, one, two, five) {
     return five;
 }
 
+// Zrušení starých service workerů a vyčištění staré cache prohlížeče
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => {
-            console.log('SW registration failed:', err);
-        });
+    navigator.serviceWorker.getRegistrations().then(regs => {
+        for (let r of regs) r.unregister();
     });
+    if ('caches' in window) {
+        caches.keys().then(keys => {
+            keys.forEach(k => caches.delete(k));
+        });
+    }
 }
 
 fetchDatabase();
