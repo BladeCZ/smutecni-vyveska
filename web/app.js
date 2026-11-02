@@ -13,6 +13,7 @@ const sectionTitle = document.getElementById('sectionTitle');
 const statsBadge = document.getElementById('statsBadge');
 const emptyState = document.getElementById('emptyState');
 const refreshBtn = document.getElementById('refreshBtn');
+const lastUpdatedEl = document.getElementById('lastUpdated');
 
 // Počítadla
 const countActive = document.getElementById('countActive');
@@ -52,9 +53,36 @@ async function fetchDatabase() {
     if (loadedData) {
         allItems = loadedData;
         updateCounts();
+        updateLastSeen(allItems);
         renderTable();
     } else {
         statsBadge.textContent = 'Chyba při načítání databáze';
+    }
+}
+
+// Zobrazení času poslední aktualizace
+function updateLastSeen(items) {
+    let latest = null;
+    for (const it of items) {
+        const timeStr = it.last_seen || it.first_seen;
+        if (timeStr) {
+            const d = new Date(timeStr.replace(' ', 'T'));
+            if (!latest || d > latest) latest = d;
+        }
+    }
+    if (latest && !isNaN(latest.getTime())) {
+        const dateFormatted = latest.toLocaleDateString('cs-CZ', {
+            day: 'numeric',
+            month: 'numeric',
+            year: 'numeric'
+        });
+        const timeFormatted = latest.toLocaleTimeString('cs-CZ', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        if (lastUpdatedEl) {
+            lastUpdatedEl.innerHTML = `🕒 Aktualizováno: <strong>${dateFormatted} v ${timeFormatted}</strong>`;
+        }
     }
 }
 
@@ -88,7 +116,7 @@ function getFilteredItems() {
     });
 }
 
-// Vykreslení standardní tabulky
+// Vykreslení standardní tabulky roztažené na celou šířku
 function renderTable() {
     const items = getFilteredItems();
     tableBody.innerHTML = '';
@@ -109,7 +137,6 @@ function renderTable() {
         const isMemory = item.category === 'Vzpomínka';
         const badgeClass = isMemory ? 'badge-memory' : 'badge-announcement';
 
-        const residenceText = item.residence ? item.residence : '–';
         const ageText = item.age ? item.age : '–';
         const dateText = item.death_date ? item.death_date : '–';
         const causeText = item.death_cause ? item.death_cause : '–';
@@ -121,18 +148,17 @@ function renderTable() {
                 <div class="cell-name-box">
                     <span class="cell-name">${escapeHtml(item.name)}</span>
                     <div class="cell-sub">
-                        <span class="badge ${badgeClass}">${escapeHtml(item.category)}</span>
                         ${item.residence ? `<span class="cell-town-under-name">📍 ${escapeHtml(item.residence)}</span>` : ''}
+                        <span class="badge ${badgeClass}">${escapeHtml(item.category)}</span>
                     </div>
                 </div>
             </td>
-            <td class="cell-town">${escapeHtml(residenceText)}</td>
             <td class="cell-age">${escapeHtml(ageText)}</td>
             <td class="cell-date">${escapeHtml(dateText)}</td>
             <td class="cell-cause">${escapeHtml(causeText)}</td>
             <td class="cell-ceremony">${escapeHtml(ceremonyText)}</td>
-            <td style="text-align: center;">
-                <button class="btn-open-parte" title="Zobrazit celé parte">
+            <td class="cell-action">
+                <button class="btn-open-parte" title="Otevřít originální obrázek parte">
                     <span>📄 Detail</span>
                 </button>
             </td>

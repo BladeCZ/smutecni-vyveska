@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smuteční vývěska | PS Horníček</title>
     <meta name="description" content="Aktuální smuteční vývěska a parte pohřební služby Horníček (Moravičany, Mohelnice a okolí)">
-    <meta name="theme-color" content="#161922">
+    <meta name="theme-color" content="#141720">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <!-- Version query string pro okamžité přepsání cache prohlížeče -->
-    <link rel="stylesheet" href="styles.css?v=20261102b">
+    <link rel="stylesheet" href="styles.css?v=20261102c">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,8 +24,11 @@
                 </div>
             </div>
             <div class="header-actions">
+                <div id="lastUpdated" class="last-updated-pill">
+                    <span>🕒 Načítám datum...</span>
+                </div>
                 <button id="refreshBtn" class="refresh-btn" title="Aktualizovat data">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
                     </svg>
                     <span>Obnovit</span>
@@ -49,7 +52,7 @@
         <div class="search-bar-wrap">
             <div class="search-box">
                 <span class="search-icon">🔍</span>
-                <input type="search" id="searchInput" placeholder="Rychlé vyhledávání (jméno, město, věk, rok...)" autocomplete="off">
+                <input type="search" id="searchInput" placeholder="Rychlé vyhledávání (jméno, město, rok, věk...)" autocomplete="off">
                 <button id="clearSearch" class="clear-btn">&times;</button>
             </div>
         </div>
@@ -61,23 +64,25 @@
                 <h2 id="sectionTitle">Aktuální smuteční oznámení</h2>
                 <span id="statsBadge" class="stats-counter">0 záznamů</span>
             </div>
-            <a href="data/database.csv" download="smutecni_vyveska.csv" class="btn-csv" title="Stáhnout tabulku do Excelu">
-                <span>📥 Exportovat do Excelu (CSV)</span>
-            </a>
+            <div class="toolbar-right">
+                <span id="lastUpdatedInline" class="last-updated-text"></span>
+                <a href="data/database.csv" download="smutecni_vyveska.csv" class="btn-csv" title="Stáhnout tabulku do Excelu">
+                    <span>📥 Export do Excelu (CSV)</span>
+                </a>
+            </div>
         </div>
 
-        <!-- ČISTÁ, STANDARDNÍ TABULKA BEZ JAKÝCHKOLIV OBRÁZKŮ V SEZNAMU -->
+        <!-- TABULKA ROZTAŽENÁ NA CELOU ŠÍŘKU, BEZ DUPLICITNÍHO SLOUPCE MĚSTO -->
         <div class="table-container">
             <table class="data-table" id="obituaryTable">
                 <thead>
                     <tr>
-                        <th style="min-width: 220px;">Jméno a Příjmení</th>
-                        <th style="min-width: 130px;">Bydliště</th>
-                        <th style="min-width: 80px;">Věk</th>
-                        <th style="min-width: 140px;">Datum úmrtí</th>
-                        <th style="min-width: 180px;">Důvod / Okolnost</th>
-                        <th style="min-width: 260px;">Kdy a kde má pohřeb</th>
-                        <th style="min-width: 120px; text-align: center;">Originál parte</th>
+                        <th class="col-name">Jméno a Příjmení</th>
+                        <th class="col-age">Věk</th>
+                        <th class="col-date">Datum úmrtí</th>
+                        <th class="col-cause">Důvod / Okolnost</th>
+                        <th class="col-ceremony">Kdy a kde má pohřeb</th>
+                        <th class="col-action">Detail</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
@@ -92,7 +97,7 @@
         </div>
     </main>
 
-    <!-- Modal dialog: Otevře se až po kliknutí na tlačítko "Detail" -->
+    <!-- Modal dialog s velkým náhledem parte po kliknutí na Detail -->
     <div id="imageModal" class="modal" role="dialog" aria-hidden="true">
         <div class="modal-backdrop" id="modalBackdrop"></div>
         <div class="modal-box">
@@ -106,7 +111,7 @@
                         <span>📤 Sdílet</span>
                     </button>
                     <a id="modalDownloadLink" class="modal-action-btn" download target="_blank" title="Stáhnout obrázek">
-                        <span>💾 Stáhnout</span>
+                        <span>💾 Stáhnout parte</span>
                     </a>
                     <button id="modalCloseBtn" class="modal-close" aria-label="Zavřít">&times;</button>
                 </div>
@@ -128,6 +133,6 @@
     </footer>
 
     <!-- Version query string pro přepsání staré JS cache -->
-    <script src="app.js?v=20261102b"></script>
+    <script src="app.js?v=20261102c"></script>
 </body>
 </html>
