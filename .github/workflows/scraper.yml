@@ -6,8 +6,8 @@ on:
     - cron: '0 */6 * * *'
   workflow_dispatch: # Možnost spustit ručně tlačítkem v GitHub Actions
   push:
-    paths:
-      - 'scraper/**'
+    branches:
+      - main
 
 permissions:
   contents: write

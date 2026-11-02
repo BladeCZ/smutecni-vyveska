@@ -407,4 +407,4 @@ def run_scraper(enrich_existing_only=False):
     print(f"\nHotovo! Všechny záznamy ({len(existing_records)}) byly aktualizovány a uloženy.")
 
 if __name__ == "__main__":
-    run_scraper(enrich_existing_only=True)
+    run_scraper(enrich_existing_only=False)
