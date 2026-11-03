@@ -41,6 +41,58 @@ URL_DROZD_VYVESKA = f"{BASE_URL_DROZD}/vyveska.php"
 RELEASE_TAG = "parte-images"
 RELEASE_BASE_URL = f"https://github.com/BladeCZ/smutecni-vyveska/releases/download/{RELEASE_TAG}"
 
+CLOUDINARY_CLOUD_NAME = os.environ.get("CLOUDINARY_CLOUD_NAME", "pf9pdwlp").strip() or "pf9pdwlp"
+CLOUDINARY_UPLOAD_PRESET = os.environ.get("CLOUDINARY_UPLOAD_PRESET", "smutecni_vyveska_upload").strip() or "smutecni_vyveska_upload"
+CLOUDINARY_API_KEY = os.environ.get("CLOUDINARY_API_KEY", "").strip()
+CLOUDINARY_API_SECRET = os.environ.get("CLOUDINARY_API_SECRET", "").strip()
+
+def upload_to_cloudinary(local_path, public_id, folder="smutecni-vyveska"):
+    """
+    Nahraje obrázek na Cloudinary (pomocí podepsaného nahrání nebo přednastaveného presetu) a vrátí secure_url.
+    """
+    if not CLOUDINARY_CLOUD_NAME:
+        return None
+    if not os.path.exists(local_path) or os.path.getsize(local_path) < 500:
+        return None
+
+    upload_url = f"https://api.cloudinary.com/v1_1/{CLOUDINARY_CLOUD_NAME}/image/upload"
+
+    try:
+        with open(local_path, "rb") as f:
+            if CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET:
+                timestamp = str(int(time.time()))
+                params_to_sign = f"folder={folder}&overwrite=true&public_id={public_id}&timestamp={timestamp}{CLOUDINARY_API_SECRET}"
+                signature = hashlib.sha1(params_to_sign.encode("utf-8")).hexdigest()
+                payload = {
+                    "api_key": CLOUDINARY_API_KEY,
+                    "timestamp": timestamp,
+                    "public_id": public_id,
+                    "folder": folder,
+                    "overwrite": "true",
+                    "signature": signature
+                }
+            else:
+                payload = {
+                    "upload_preset": CLOUDINARY_UPLOAD_PRESET,
+                    "public_id": public_id,
+                    "folder": folder
+                }
+            resp = requests.post(
+                upload_url,
+                data=payload,
+                files={"file": f},
+                timeout=45
+            )
+        if resp.status_code == 200:
+            return resp.json().get("secure_url")
+        elif "already exists" in resp.text:
+            return f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/image/upload/{folder}/{public_id}.jpg"
+        else:
+            print(f"  [Cloudinary] Chyba nahrávání {public_id} ({resp.status_code}): {resp.text[:160]}")
+    except Exception as e:
+        print(f"  [Cloudinary] Výjimka při nahrávání {public_id}: {e}")
+    return None
+
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 IMAGES_DIR = os.path.join(DATA_DIR, "images")
@@ -996,7 +1048,10 @@ def run_scraper(enrich_existing_only=False):
             img_filename = item["filename"]
             local_img_path = os.path.join(IMAGES_DIR, img_filename)
             rel_img_path = f"images/{img_filename}"
-            download_image(item["image_url"], local_img_path)
+            existing_rec = existing_records.get(item_id)
+            already_on_cloud = bool(existing_rec and existing_rec.get("release_image_url", "").startswith("https://res.cloudinary.com/") and existing_rec.get("raw_text"))
+            if not already_on_cloud:
+                download_image(item["image_url"], local_img_path)
             
             if item_id not in existing_records:
                 existing_records[item_id] = {
@@ -1010,7 +1065,7 @@ def run_scraper(enrich_existing_only=False):
                     "is_archived": item["is_archived"],
                     "image_url": item["image_url"],
                     "local_image_path": rel_img_path,
-                    "release_image_url": f"{RELEASE_BASE_URL}/{img_filename}",
+                    "release_image_url": "",
                     "face_image_path": "",
                     "release_face_url": "",
                     "first_seen": now_iso,
@@ -1035,7 +1090,8 @@ def run_scraper(enrich_existing_only=False):
                     existing["is_archived"] = True
                 existing["last_seen"] = now_iso
                 existing["local_image_path"] = rel_img_path
-                existing["release_image_url"] = f"{RELEASE_BASE_URL}/{img_filename}"
+                if not existing.get("release_image_url", "").startswith("https://res.cloudinary.com/"):
+                    existing["release_image_url"] = ""
 
     for r in existing_records.values():
         if not r.get("is_active") and not r.get("is_archived"):
@@ -1075,15 +1131,23 @@ def run_scraper(enrich_existing_only=False):
         else:
             item["lat"], item["lon"] = None, None
 
-        item["release_image_url"] = f"{RELEASE_BASE_URL}/{fname}"
+        # Nahrání parte na Cloudinary (pokud ještě není na Cloudinary)
+        current_rel_img = item.get("release_image_url", "")
+        if not current_rel_img.startswith("https://res.cloudinary.com/"):
+            cloud_img_url = upload_to_cloudinary(img_path, f"parte_{item_id}")
+            if cloud_img_url:
+                item["release_image_url"] = cloud_img_url
 
         if os.path.exists(img_path):
             face_rel = extract_face_portrait(img_path, item_id, force=enrich_existing_only)
             item["face_image_path"] = face_rel
-            item["release_face_url"] = f"{RELEASE_BASE_URL}/face_{item_id}.jpg" if face_rel else ""
-        else:
-            if item.get("face_image_path"):
-                item["release_face_url"] = f"{RELEASE_BASE_URL}/face_{item_id}.jpg"
+            if face_rel:
+                face_abs = os.path.join(FACES_DIR, f"{item_id}.jpg")
+                current_rel_face = item.get("release_face_url", "")
+                if not current_rel_face.startswith("https://res.cloudinary.com/"):
+                    cloud_face_url = upload_to_cloudinary(face_abs, f"face_{item_id}")
+                    if cloud_face_url:
+                        item["release_face_url"] = cloud_face_url
             else:
                 item["release_face_url"] = ""
 

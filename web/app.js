@@ -594,7 +594,8 @@ function renderTable() {
     emptyState.style.display = 'none';
 
     items.forEach(item => {
-        const imgSrc = item.local_image_path || item.release_image_url || item.image_url;
+        const isCloudImg = item.release_image_url && item.release_image_url.startsWith('https://res.cloudinary.com/');
+        const imgSrc = isCloudImg ? item.release_image_url : (item.local_image_path || item.release_image_url || item.image_url);
         const isMemory = item.category === 'Vzpomínka';
         const badgeClass = isMemory ? 'badge-memory' : 'badge-announcement';
 
@@ -618,9 +619,10 @@ function renderTable() {
             }
         }
 
-        // Fotografie obličeje pod jménem (lokální + záloha v GitHub Releases)
-        const facePrimary = item.face_image_path || item.release_face_url;
-        const faceFallback = (item.face_image_path && item.release_face_url) ? item.release_face_url : '';
+        // Fotografie obličeje pod jménem (primárně Cloudinary + lokální záloha)
+        const isCloudFace = item.release_face_url && item.release_face_url.startsWith('https://res.cloudinary.com/');
+        const facePrimary = isCloudFace ? item.release_face_url : (item.face_image_path || item.release_face_url);
+        const faceFallback = isCloudFace ? (item.face_image_path || '') : (item.release_face_url || '');
         const faceHtml = facePrimary
             ? `<img src="${escapeHtml(facePrimary)}" data-fallback="${escapeHtml(faceFallback)}" alt="Portrét ${escapeHtml(item.name)}" class="face-portrait" loading="lazy" onerror="if(this.dataset.fallback && this.src !== this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none';}">`
             : '';

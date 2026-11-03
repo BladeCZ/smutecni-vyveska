@@ -43,41 +43,37 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r scraper/requirements.txt
 
-      - name: Spuštění scraperu
+      - name: Spuštění scraperu (a nahrání fotek na Cloudinary)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           python scraper/scraper.py
 
-      - name: Nahrání fotek parte a obličejů do GitHub Releases (neomezené úložiště)
+      - name: Odstranění fotek z GitHub Releases (ponecháno pouze pro APK)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release view parte-images >/dev/null 2>&1 || gh release create parte-images --title "Úložiště fotek parte a obličejů" --notes "Automatické úložiště obrázků parte a výřezů obličejů mimo Git limit."
-          if ls data/images/*.jpg >/dev/null 2>&1; then
-            gh release upload parte-images data/images/*.jpg --clobber
-          fi
-          if ls data/images/faces/*.jpg >/dev/null 2>&1; then
-            mkdir -p /tmp/release_faces
-            for f in data/images/faces/*.jpg; do
-              cp "$f" "/tmp/release_faces/face_$(basename "$f")"
+          if gh release view parte-images >/dev/null 2>&1; then
+            for asset in $(gh release view parte-images --json assets -q '.assets[].name' | grep -E '\.jpg$|\.png$' || true); do
+              gh release delete-asset parte-images "$asset" -y || true
             done
-            gh release upload parte-images /tmp/release_faces/face_*.jpg --clobber
           fi
 
       - name: Příprava složky pro GitHub Pages
         run: |
-          # Zkopírovat data a obrázky do web/ pro hosting na GitHub Pages
-          mkdir -p web/data web/images
+          # Zkopírovat databázi do web/data/ pro hosting na GitHub Pages (fotky jsou na Cloudinary)
+          mkdir -p web/data
           cp data/database.json web/data/database.json || true
           cp data/database.csv web/data/database.csv || true
-          cp -r data/images/* web/images/ || true
 
       - name: Commit a Push změn do repozitáře
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/ web/data/ web/images/
+          git add data/database.json data/database.csv data/database.sqlite web/data/
           if git diff --staged --quiet; then
             echo "Žádné nové změny v datech."
           else

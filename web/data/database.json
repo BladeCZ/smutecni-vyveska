@@ -10,9 +10,9 @@
     "is_archived": false,
     "image_url": "https://www.pohrebnictvi-drozd.cz/parte/1793712683_scan2_001948.jpg",
     "local_image_path": "images/drozd_51d1097d9283852840b6201cdd.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/drozd_51d1097d9283852840b6201cdd.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745449/smutecni-vyveska/parte_drozd_51d1097d9283852840b6201cdd.jpg",
     "face_image_path": "images/faces/drozd_51d1097d9283852840b6201cdd.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_drozd_51d1097d9283852840b6201cdd.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745450/smutecni-vyveska/face_drozd_51d1097d9283852840b6201cdd.jpg",
     "first_seen": "2026-11-03 18:18:46",
     "last_seen": "2026-11-03 19:04:08",
     "age": "84 let",
@@ -36,9 +36,9 @@
     "is_archived": false,
     "image_url": "https://www.pohrebnictvi-drozd.cz/parte/1793712671_scan2_001949.jpg",
     "local_image_path": "images/drozd_2d55e72b72532e301b4eafc8f4.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/drozd_2d55e72b72532e301b4eafc8f4.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745454/smutecni-vyveska/parte_drozd_2d55e72b72532e301b4eafc8f4.jpg",
     "face_image_path": "images/faces/drozd_2d55e72b72532e301b4eafc8f4.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_drozd_2d55e72b72532e301b4eafc8f4.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745455/smutecni-vyveska/face_drozd_2d55e72b72532e301b4eafc8f4.jpg",
     "first_seen": "2026-11-03 18:18:46",
     "last_seen": "2026-11-03 19:04:08",
     "age": "87 let",
@@ -62,9 +62,9 @@
     "is_archived": false,
     "image_url": "https://www.pohrebnictvi-drozd.cz/parte/1793712664_scan2_001950.jpg",
     "local_image_path": "images/drozd_1cff92cd69567e0f32691cc586.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/drozd_1cff92cd69567e0f32691cc586.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745467/smutecni-vyveska/parte_drozd_1cff92cd69567e0f32691cc586.jpg",
     "face_image_path": "images/faces/drozd_1cff92cd69567e0f32691cc586.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_drozd_1cff92cd69567e0f32691cc586.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745468/smutecni-vyveska/face_drozd_1cff92cd69567e0f32691cc586.jpg",
     "first_seen": "2026-11-03 18:18:46",
     "last_seen": "2026-11-03 19:04:08",
     "age": "65 let",
@@ -88,9 +88,9 @@
     "is_archived": false,
     "image_url": "https://www.pohrebnictvi-drozd.cz/parte/1793611464_scan2_001944.jpg",
     "local_image_path": "images/drozd_fd529c26194280d1d9deb6b60a.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/drozd_fd529c26194280d1d9deb6b60a.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745474/smutecni-vyveska/parte_drozd_fd529c26194280d1d9deb6b60a.jpg",
     "face_image_path": "images/faces/drozd_fd529c26194280d1d9deb6b60a.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_drozd_fd529c26194280d1d9deb6b60a.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745475/smutecni-vyveska/face_drozd_fd529c26194280d1d9deb6b60a.jpg",
     "first_seen": "2026-11-03 18:18:46",
     "last_seen": "2026-11-03 19:04:08",
     "age": "82 let",
@@ -126,8 +126,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/26ab3610e8642500eb2ed6b3585c9791.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/26ab3610e8642500eb2ed6b3585c9791.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_26ab3610e8642500eb2ed6b3585c9791.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745480/smutecni-vyveska/parte_26ab3610e8642500eb2ed6b3585c9791.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745481/smutecni-vyveska/face_26ab3610e8642500eb2ed6b3585c9791.jpg"
   },
   {
     "id": "12520db6aadbdfe21a6bf86f563ac740",
@@ -152,8 +152,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/12520db6aadbdfe21a6bf86f563ac740.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/12520db6aadbdfe21a6bf86f563ac740.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_12520db6aadbdfe21a6bf86f563ac740.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745487/smutecni-vyveska/parte_12520db6aadbdfe21a6bf86f563ac740.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745488/smutecni-vyveska/face_12520db6aadbdfe21a6bf86f563ac740.jpg"
   },
   {
     "id": "7f732738b06f0a715c4ce5e304f5882a",
@@ -178,7 +178,7 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/7f732738b06f0a715c4ce5e304f5882a.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745493/smutecni-vyveska/parte_7f732738b06f0a715c4ce5e304f5882a.jpg",
     "release_face_url": ""
   },
   {
@@ -192,7 +192,7 @@
     "is_archived": false,
     "image_url": "https://www.pohrebnictvi-drozd.cz/parte/1793460005_scan2_001942.jpg",
     "local_image_path": "images/drozd_f767e317c730b036127aee35ba.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/drozd_f767e317c730b036127aee35ba.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745495/smutecni-vyveska/parte_drozd_f767e317c730b036127aee35ba.jpg",
     "face_image_path": "",
     "release_face_url": "",
     "first_seen": "2026-11-03 18:18:46",
@@ -230,7 +230,7 @@
     "lat": 49.7458,
     "lon": 16.9278,
     "face_image_path": "",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/f3faf6bb49bab813c70de4508c6633ce.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745499/smutecni-vyveska/parte_f3faf6bb49bab813c70de4508c6633ce.jpg",
     "release_face_url": ""
   },
   {
@@ -244,9 +244,9 @@
     "is_archived": false,
     "image_url": "https://www.hrandop.cz/admin/photos/ModuleSmutecniOznameni/1550/20261029124936821-0001-6ae333d1e4576.jpg",
     "local_image_path": "images/hrandop_bff550874da3970dd2986871.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/hrandop_bff550874da3970dd2986871.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745507/smutecni-vyveska/parte_hrandop_bff550874da3970dd2986871.jpg",
     "face_image_path": "images/faces/hrandop_bff550874da3970dd2986871.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_hrandop_bff550874da3970dd2986871.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745508/smutecni-vyveska/face_hrandop_bff550874da3970dd2986871.jpg",
     "first_seen": "2026-11-03 18:18:46",
     "last_seen": "2026-11-03 19:04:08",
     "age": "77 let",
@@ -282,8 +282,8 @@
     "lat": 49.7458,
     "lon": 16.9278,
     "face_image_path": "images/faces/1c6c5d65d7e7600b4a6f77ace84b7c60.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/1c6c5d65d7e7600b4a6f77ace84b7c60.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_1c6c5d65d7e7600b4a6f77ace84b7c60.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745511/smutecni-vyveska/parte_1c6c5d65d7e7600b4a6f77ace84b7c60.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745512/smutecni-vyveska/face_1c6c5d65d7e7600b4a6f77ace84b7c60.jpg"
   },
   {
     "id": "hrandop_ea218455b2afab6479b106b6",
@@ -296,9 +296,9 @@
     "is_archived": false,
     "image_url": "https://www.hrandop.cz/admin/photos/ModuleSmutecniOznameni/1551/rubisova-jarmila-parte-21-6ae345296841c.jpg",
     "local_image_path": "images/hrandop_ea218455b2afab6479b106b6.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/hrandop_ea218455b2afab6479b106b6.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745517/smutecni-vyveska/parte_hrandop_ea218455b2afab6479b106b6.jpg",
     "face_image_path": "images/faces/hrandop_ea218455b2afab6479b106b6.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_hrandop_ea218455b2afab6479b106b6.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745518/smutecni-vyveska/face_hrandop_ea218455b2afab6479b106b6.jpg",
     "first_seen": "2026-11-03 18:18:46",
     "last_seen": "2026-11-03 19:04:08",
     "age": "90 let",
@@ -334,8 +334,8 @@
     "lat": 49.7408,
     "lon": 16.8803,
     "face_image_path": "images/faces/be9a5c6dcfc4689ea0fc16776b9bc276.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/be9a5c6dcfc4689ea0fc16776b9bc276.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_be9a5c6dcfc4689ea0fc16776b9bc276.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745523/smutecni-vyveska/parte_be9a5c6dcfc4689ea0fc16776b9bc276.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745527/smutecni-vyveska/face_be9a5c6dcfc4689ea0fc16776b9bc276.jpg"
   },
   {
     "id": "15ee163b8d50b4a8161e8ed8ead1c801",
@@ -360,8 +360,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/15ee163b8d50b4a8161e8ed8ead1c801.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/15ee163b8d50b4a8161e8ed8ead1c801.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_15ee163b8d50b4a8161e8ed8ead1c801.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745530/smutecni-vyveska/parte_15ee163b8d50b4a8161e8ed8ead1c801.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745531/smutecni-vyveska/face_15ee163b8d50b4a8161e8ed8ead1c801.jpg"
   },
   {
     "id": "cfafa4468946a8efbc714cc2dd61a7a6",
@@ -386,8 +386,8 @@
     "lat": 49.7569,
     "lon": 16.9636,
     "face_image_path": "images/faces/cfafa4468946a8efbc714cc2dd61a7a6.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/cfafa4468946a8efbc714cc2dd61a7a6.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_cfafa4468946a8efbc714cc2dd61a7a6.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745534/smutecni-vyveska/parte_cfafa4468946a8efbc714cc2dd61a7a6.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745535/smutecni-vyveska/face_cfafa4468946a8efbc714cc2dd61a7a6.jpg"
   },
   {
     "id": "f615c97b30c480acf324ad4fe6f96e2b",
@@ -412,8 +412,8 @@
     "lat": 49.7458,
     "lon": 16.9278,
     "face_image_path": "images/faces/f615c97b30c480acf324ad4fe6f96e2b.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/f615c97b30c480acf324ad4fe6f96e2b.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_f615c97b30c480acf324ad4fe6f96e2b.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745539/smutecni-vyveska/parte_f615c97b30c480acf324ad4fe6f96e2b.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745540/smutecni-vyveska/face_f615c97b30c480acf324ad4fe6f96e2b.jpg"
   },
   {
     "id": "dff498d0e12f08ea2b5c592b7db4114f",
@@ -438,8 +438,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/dff498d0e12f08ea2b5c592b7db4114f.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/dff498d0e12f08ea2b5c592b7db4114f.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_dff498d0e12f08ea2b5c592b7db4114f.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745544/smutecni-vyveska/parte_dff498d0e12f08ea2b5c592b7db4114f.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745545/smutecni-vyveska/face_dff498d0e12f08ea2b5c592b7db4114f.jpg"
   },
   {
     "id": "cf0bb4d9c13afbe51e2e6d20ab2d2c44",
@@ -464,8 +464,8 @@
     "lat": 49.7458,
     "lon": 16.9278,
     "face_image_path": "images/faces/cf0bb4d9c13afbe51e2e6d20ab2d2c44.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/cf0bb4d9c13afbe51e2e6d20ab2d2c44.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_cf0bb4d9c13afbe51e2e6d20ab2d2c44.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745549/smutecni-vyveska/parte_cf0bb4d9c13afbe51e2e6d20ab2d2c44.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745550/smutecni-vyveska/face_cf0bb4d9c13afbe51e2e6d20ab2d2c44.jpg"
   },
   {
     "id": "46dceb8b1ff46d10f6e74dcce98f21ac",
@@ -490,8 +490,8 @@
     "lat": 49.7569,
     "lon": 16.9636,
     "face_image_path": "images/faces/46dceb8b1ff46d10f6e74dcce98f21ac.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/46dceb8b1ff46d10f6e74dcce98f21ac.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_46dceb8b1ff46d10f6e74dcce98f21ac.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745554/smutecni-vyveska/parte_46dceb8b1ff46d10f6e74dcce98f21ac.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745555/smutecni-vyveska/face_46dceb8b1ff46d10f6e74dcce98f21ac.jpg"
   },
   {
     "id": "b100d30119943b2b8d67bef1a68eddcf",
@@ -516,8 +516,8 @@
     "lat": 49.7458,
     "lon": 16.9278,
     "face_image_path": "images/faces/b100d30119943b2b8d67bef1a68eddcf.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/b100d30119943b2b8d67bef1a68eddcf.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_b100d30119943b2b8d67bef1a68eddcf.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745558/smutecni-vyveska/parte_b100d30119943b2b8d67bef1a68eddcf.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745559/smutecni-vyveska/face_b100d30119943b2b8d67bef1a68eddcf.jpg"
   },
   {
     "id": "ce1612f1468924df2477e90e7f0b32e7",
@@ -542,8 +542,8 @@
     "lat": 49.7458,
     "lon": 16.9278,
     "face_image_path": "images/faces/ce1612f1468924df2477e90e7f0b32e7.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/ce1612f1468924df2477e90e7f0b32e7.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_ce1612f1468924df2477e90e7f0b32e7.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745565/smutecni-vyveska/parte_ce1612f1468924df2477e90e7f0b32e7.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745566/smutecni-vyveska/face_ce1612f1468924df2477e90e7f0b32e7.jpg"
   },
   {
     "id": "2ddd2c3b0b5c48407e5179d97d1331f5",
@@ -568,8 +568,8 @@
     "lat": 49.7664,
     "lon": 16.8844,
     "face_image_path": "images/faces/2ddd2c3b0b5c48407e5179d97d1331f5.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/2ddd2c3b0b5c48407e5179d97d1331f5.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_2ddd2c3b0b5c48407e5179d97d1331f5.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745570/smutecni-vyveska/parte_2ddd2c3b0b5c48407e5179d97d1331f5.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745571/smutecni-vyveska/face_2ddd2c3b0b5c48407e5179d97d1331f5.jpg"
   },
   {
     "id": "e59b2fabafc5719373978a9f3f041a63",
@@ -594,8 +594,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/e59b2fabafc5719373978a9f3f041a63.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/e59b2fabafc5719373978a9f3f041a63.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_e59b2fabafc5719373978a9f3f041a63.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745575/smutecni-vyveska/parte_e59b2fabafc5719373978a9f3f041a63.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745577/smutecni-vyveska/face_e59b2fabafc5719373978a9f3f041a63.jpg"
   },
   {
     "id": "6a03f5dac9f58c4d35dfd28fffc58104",
@@ -620,8 +620,8 @@
     "lat": 49.8208,
     "lon": 16.94,
     "face_image_path": "images/faces/6a03f5dac9f58c4d35dfd28fffc58104.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/6a03f5dac9f58c4d35dfd28fffc58104.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_6a03f5dac9f58c4d35dfd28fffc58104.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745582/smutecni-vyveska/parte_6a03f5dac9f58c4d35dfd28fffc58104.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745583/smutecni-vyveska/face_6a03f5dac9f58c4d35dfd28fffc58104.jpg"
   },
   {
     "id": "b206d119af3d0eb5faa93e300eaa0c31",
@@ -646,8 +646,8 @@
     "lat": 49.7458,
     "lon": 16.9278,
     "face_image_path": "images/faces/b206d119af3d0eb5faa93e300eaa0c31.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/b206d119af3d0eb5faa93e300eaa0c31.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_b206d119af3d0eb5faa93e300eaa0c31.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745586/smutecni-vyveska/parte_b206d119af3d0eb5faa93e300eaa0c31.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745587/smutecni-vyveska/face_b206d119af3d0eb5faa93e300eaa0c31.jpg"
   },
   {
     "id": "9fc3323184449ed94a368d1a7bcb95da",
@@ -672,8 +672,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/9fc3323184449ed94a368d1a7bcb95da.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/9fc3323184449ed94a368d1a7bcb95da.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_9fc3323184449ed94a368d1a7bcb95da.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745592/smutecni-vyveska/parte_9fc3323184449ed94a368d1a7bcb95da.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745593/smutecni-vyveska/face_9fc3323184449ed94a368d1a7bcb95da.jpg"
   },
   {
     "id": "08df1eeeee35a6256585556dfda31aab",
@@ -698,8 +698,8 @@
     "lat": 49.7664,
     "lon": 16.8844,
     "face_image_path": "images/faces/08df1eeeee35a6256585556dfda31aab.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/08df1eeeee35a6256585556dfda31aab.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_08df1eeeee35a6256585556dfda31aab.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745597/smutecni-vyveska/parte_08df1eeeee35a6256585556dfda31aab.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745598/smutecni-vyveska/face_08df1eeeee35a6256585556dfda31aab.jpg"
   },
   {
     "id": "b6481cb13b66e9a8bcd3e0b55f704924",
@@ -724,7 +724,7 @@
     "lat": 49.7458,
     "lon": 16.9278,
     "face_image_path": "",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/b6481cb13b66e9a8bcd3e0b55f704924.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745604/smutecni-vyveska/parte_b6481cb13b66e9a8bcd3e0b55f704924.jpg",
     "release_face_url": ""
   },
   {
@@ -750,8 +750,8 @@
     "lat": 49.825,
     "lon": 17.0406,
     "face_image_path": "images/faces/3f0ddc200267014d4cf624465a221882.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/3f0ddc200267014d4cf624465a221882.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_3f0ddc200267014d4cf624465a221882.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745610/smutecni-vyveska/parte_3f0ddc200267014d4cf624465a221882.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745612/smutecni-vyveska/face_3f0ddc200267014d4cf624465a221882.jpg"
   },
   {
     "id": "3488369b5ff1c0e161a5090e93bca4c1",
@@ -776,8 +776,8 @@
     "lat": 49.8236,
     "lon": 16.9158,
     "face_image_path": "images/faces/3488369b5ff1c0e161a5090e93bca4c1.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/3488369b5ff1c0e161a5090e93bca4c1.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_3488369b5ff1c0e161a5090e93bca4c1.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745616/smutecni-vyveska/parte_3488369b5ff1c0e161a5090e93bca4c1.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745617/smutecni-vyveska/face_3488369b5ff1c0e161a5090e93bca4c1.jpg"
   },
   {
     "id": "2b297b63728a394fa2ab05271b944d4b",
@@ -802,8 +802,8 @@
     "lat": 49.7408,
     "lon": 16.8803,
     "face_image_path": "images/faces/2b297b63728a394fa2ab05271b944d4b.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/2b297b63728a394fa2ab05271b944d4b.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_2b297b63728a394fa2ab05271b944d4b.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745623/smutecni-vyveska/parte_2b297b63728a394fa2ab05271b944d4b.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745625/smutecni-vyveska/face_2b297b63728a394fa2ab05271b944d4b.jpg"
   },
   {
     "id": "7d0cfa93143070e3a37ca99909f2829d",
@@ -828,8 +828,8 @@
     "lat": 49.7458,
     "lon": 16.9278,
     "face_image_path": "images/faces/7d0cfa93143070e3a37ca99909f2829d.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/7d0cfa93143070e3a37ca99909f2829d.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_7d0cfa93143070e3a37ca99909f2829d.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745631/smutecni-vyveska/parte_7d0cfa93143070e3a37ca99909f2829d.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745634/smutecni-vyveska/face_7d0cfa93143070e3a37ca99909f2829d.jpg"
   },
   {
     "id": "dc38846e4a48cba9588bbdf92da89946",
@@ -854,8 +854,8 @@
     "lat": 49.7986,
     "lon": 17.0108,
     "face_image_path": "images/faces/dc38846e4a48cba9588bbdf92da89946.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/dc38846e4a48cba9588bbdf92da89946.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_dc38846e4a48cba9588bbdf92da89946.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745637/smutecni-vyveska/parte_dc38846e4a48cba9588bbdf92da89946.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745639/smutecni-vyveska/face_dc38846e4a48cba9588bbdf92da89946.jpg"
   },
   {
     "id": "d488e5af597e45f10746871c50a6cac9",
@@ -880,8 +880,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/d488e5af597e45f10746871c50a6cac9.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/d488e5af597e45f10746871c50a6cac9.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_d488e5af597e45f10746871c50a6cac9.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745643/smutecni-vyveska/parte_d488e5af597e45f10746871c50a6cac9.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745644/smutecni-vyveska/face_d488e5af597e45f10746871c50a6cac9.jpg"
   },
   {
     "id": "ce0e5080f7706e125090493cbb913253",
@@ -906,8 +906,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/ce0e5080f7706e125090493cbb913253.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/ce0e5080f7706e125090493cbb913253.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_ce0e5080f7706e125090493cbb913253.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745647/smutecni-vyveska/parte_ce0e5080f7706e125090493cbb913253.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745648/smutecni-vyveska/face_ce0e5080f7706e125090493cbb913253.jpg"
   },
   {
     "id": "aae7f055b752a74b14707f50d4d2764c",
@@ -932,8 +932,8 @@
     "lat": 49.8639,
     "lon": 17.0233,
     "face_image_path": "images/faces/aae7f055b752a74b14707f50d4d2764c.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/aae7f055b752a74b14707f50d4d2764c.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_aae7f055b752a74b14707f50d4d2764c.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745652/smutecni-vyveska/parte_aae7f055b752a74b14707f50d4d2764c.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745653/smutecni-vyveska/face_aae7f055b752a74b14707f50d4d2764c.jpg"
   },
   {
     "id": "409596943b19cd28ebfe7ae437f5aa59",
@@ -958,8 +958,8 @@
     "lat": 49.8267,
     "lon": 16.9647,
     "face_image_path": "images/faces/409596943b19cd28ebfe7ae437f5aa59.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/409596943b19cd28ebfe7ae437f5aa59.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_409596943b19cd28ebfe7ae437f5aa59.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745656/smutecni-vyveska/parte_409596943b19cd28ebfe7ae437f5aa59.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745657/smutecni-vyveska/face_409596943b19cd28ebfe7ae437f5aa59.jpg"
   },
   {
     "id": "86ba5ccbb100cb25db71ae0e287daba1",
@@ -984,8 +984,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/86ba5ccbb100cb25db71ae0e287daba1.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/86ba5ccbb100cb25db71ae0e287daba1.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_86ba5ccbb100cb25db71ae0e287daba1.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745662/smutecni-vyveska/parte_86ba5ccbb100cb25db71ae0e287daba1.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745663/smutecni-vyveska/face_86ba5ccbb100cb25db71ae0e287daba1.jpg"
   },
   {
     "id": "5d1c1e0070572f85f6d89079be5b412c",
@@ -1010,8 +1010,8 @@
     "lat": 49.8117,
     "lon": 16.8322,
     "face_image_path": "images/faces/5d1c1e0070572f85f6d89079be5b412c.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/5d1c1e0070572f85f6d89079be5b412c.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_5d1c1e0070572f85f6d89079be5b412c.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745668/smutecni-vyveska/parte_5d1c1e0070572f85f6d89079be5b412c.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745671/smutecni-vyveska/face_5d1c1e0070572f85f6d89079be5b412c.jpg"
   },
   {
     "id": "616636d60a069cb7e1ce89aa89ce3576",
@@ -1036,8 +1036,8 @@
     "lat": 49.7986,
     "lon": 17.0108,
     "face_image_path": "images/faces/616636d60a069cb7e1ce89aa89ce3576.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/616636d60a069cb7e1ce89aa89ce3576.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_616636d60a069cb7e1ce89aa89ce3576.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745675/smutecni-vyveska/parte_616636d60a069cb7e1ce89aa89ce3576.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745676/smutecni-vyveska/face_616636d60a069cb7e1ce89aa89ce3576.jpg"
   },
   {
     "id": "21790b7ae4f15e2d8023ee5182bf1a36",
@@ -1062,8 +1062,8 @@
     "lat": 49.7611,
     "lon": 16.8269,
     "face_image_path": "images/faces/21790b7ae4f15e2d8023ee5182bf1a36.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/21790b7ae4f15e2d8023ee5182bf1a36.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_21790b7ae4f15e2d8023ee5182bf1a36.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745679/smutecni-vyveska/parte_21790b7ae4f15e2d8023ee5182bf1a36.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745681/smutecni-vyveska/face_21790b7ae4f15e2d8023ee5182bf1a36.jpg"
   },
   {
     "id": "1aafdb51a6a13e33e78e67bb939b6118",
@@ -1088,8 +1088,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/1aafdb51a6a13e33e78e67bb939b6118.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/1aafdb51a6a13e33e78e67bb939b6118.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_1aafdb51a6a13e33e78e67bb939b6118.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745684/smutecni-vyveska/parte_1aafdb51a6a13e33e78e67bb939b6118.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745685/smutecni-vyveska/face_1aafdb51a6a13e33e78e67bb939b6118.jpg"
   },
   {
     "id": "b2067b2f14c7b6cffb0b2ce1012943df",
@@ -1114,8 +1114,8 @@
     "lat": 49.8058,
     "lon": 17.0794,
     "face_image_path": "images/faces/b2067b2f14c7b6cffb0b2ce1012943df.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/b2067b2f14c7b6cffb0b2ce1012943df.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_b2067b2f14c7b6cffb0b2ce1012943df.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745688/smutecni-vyveska/parte_b2067b2f14c7b6cffb0b2ce1012943df.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745690/smutecni-vyveska/face_b2067b2f14c7b6cffb0b2ce1012943df.jpg"
   },
   {
     "id": "6cea2fac8385ecc04066a75fbea25818",
@@ -1140,8 +1140,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/6cea2fac8385ecc04066a75fbea25818.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/6cea2fac8385ecc04066a75fbea25818.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_6cea2fac8385ecc04066a75fbea25818.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745693/smutecni-vyveska/parte_6cea2fac8385ecc04066a75fbea25818.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745694/smutecni-vyveska/face_6cea2fac8385ecc04066a75fbea25818.jpg"
   },
   {
     "id": "c6b33c0d348e3ea682c8ca26d976ab64",
@@ -1166,8 +1166,8 @@
     "lat": 49.7967,
     "lon": 16.9639,
     "face_image_path": "images/faces/c6b33c0d348e3ea682c8ca26d976ab64.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/c6b33c0d348e3ea682c8ca26d976ab64.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_c6b33c0d348e3ea682c8ca26d976ab64.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745699/smutecni-vyveska/parte_c6b33c0d348e3ea682c8ca26d976ab64.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745700/smutecni-vyveska/face_c6b33c0d348e3ea682c8ca26d976ab64.jpg"
   },
   {
     "id": "05dd483b68746bec92e84584ae96ac55",
@@ -1192,8 +1192,8 @@
     "lat": 49.8208,
     "lon": 16.94,
     "face_image_path": "images/faces/05dd483b68746bec92e84584ae96ac55.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/05dd483b68746bec92e84584ae96ac55.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_05dd483b68746bec92e84584ae96ac55.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745705/smutecni-vyveska/parte_05dd483b68746bec92e84584ae96ac55.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745706/smutecni-vyveska/face_05dd483b68746bec92e84584ae96ac55.jpg"
   },
   {
     "id": "4e99b861627995d8b7d614d6fdeb031a",
@@ -1218,8 +1218,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/4e99b861627995d8b7d614d6fdeb031a.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/4e99b861627995d8b7d614d6fdeb031a.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_4e99b861627995d8b7d614d6fdeb031a.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745711/smutecni-vyveska/parte_4e99b861627995d8b7d614d6fdeb031a.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745713/smutecni-vyveska/face_4e99b861627995d8b7d614d6fdeb031a.jpg"
   },
   {
     "id": "0620fdb0cad1b5f3216b22ea620f2864",
@@ -1244,8 +1244,8 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "images/faces/0620fdb0cad1b5f3216b22ea620f2864.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/0620fdb0cad1b5f3216b22ea620f2864.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_0620fdb0cad1b5f3216b22ea620f2864.jpg"
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745718/smutecni-vyveska/parte_0620fdb0cad1b5f3216b22ea620f2864.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745720/smutecni-vyveska/face_0620fdb0cad1b5f3216b22ea620f2864.jpg"
   },
   {
     "id": "c60c8c98fa985b0f00b78f1677da4605",
@@ -1270,7 +1270,7 @@
     "lat": 49.7769,
     "lon": 16.9194,
     "face_image_path": "",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/c60c8c98fa985b0f00b78f1677da4605.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745723/smutecni-vyveska/parte_c60c8c98fa985b0f00b78f1677da4605.jpg",
     "release_face_url": ""
   },
   {
@@ -1284,9 +1284,9 @@
     "is_archived": false,
     "image_url": "https://www.hrandop.cz/admin/photos/ModuleSmutecniOznameni/1553/lukas-haberman-9-cdr-parte-6ae45f5a73532.jpg",
     "local_image_path": "images/hrandop_20c05b9ec8a4fecfc995c007.jpg",
-    "release_image_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/hrandop_20c05b9ec8a4fecfc995c007.jpg",
+    "release_image_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745728/smutecni-vyveska/parte_hrandop_20c05b9ec8a4fecfc995c007.jpg",
     "face_image_path": "images/faces/hrandop_20c05b9ec8a4fecfc995c007.jpg",
-    "release_face_url": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/face_hrandop_20c05b9ec8a4fecfc995c007.jpg",
+    "release_face_url": "https://res.cloudinary.com/pf9pdwlp/image/upload/v1793745729/smutecni-vyveska/face_hrandop_20c05b9ec8a4fecfc995c007.jpg",
     "first_seen": "2026-11-03 18:18:46",
     "last_seen": "2026-11-03 19:04:08",
     "age": "47 let",
