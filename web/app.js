@@ -54,7 +54,32 @@ const TOWN_COORDS = {
     "Moravská Třebová": [49.7578, 16.6642],
     "prostějov": [49.4719, 17.1118],
     "Prostějov": [49.4719, 17.1118],
-    "Lanškroun": [49.9122, 16.6119]
+    "Lanškroun": [49.9122, 16.6119],
+    "Náklo": [49.6542, 17.1292],
+    "Chromeč": [49.9469, 16.8719],
+    "Rájec": [49.8453, 16.8856],
+    "Postřelmov": [49.9078, 16.9061],
+    "Bludov": [49.9428, 16.9297],
+    "Ruda nad Moravou": [49.9839, 16.8764],
+    "Sudkov": [49.9114, 16.9425],
+    "Lesnice": [49.8736, 16.9453],
+    "Leština": [49.8742, 16.9233],
+    "Brníčko": [49.8950, 16.9736],
+    "Kolšov": [49.9039, 16.9250],
+    "Nemile": [49.8808, 16.8358],
+    "Červenka": [49.7219, 17.0811],
+    "Senice na Hané": [49.6228, 17.0878],
+    "Cholina": [49.6611, 17.0542],
+    "Bílsko": [49.6472, 17.0369],
+    "Haňovice": [49.6797, 17.0439],
+    "Pňovice": [49.7192, 17.1636],
+    "Střeň": [49.6964, 17.1528],
+    "Příkazy": [49.6361, 17.1450],
+    "Horka nad Moravou": [49.6400, 17.2094],
+    "Štěpánov": [49.6850, 17.2208],
+    "Bouzov": [49.7042, 16.8894],
+    "Hvozd": [49.6317, 16.9178],
+    "Luká": [49.6478, 16.9467]
 };
 
 // DOM prvky
@@ -182,7 +207,7 @@ function populateFilterDropdowns(items) {
 
     // Zdroje parte
     const currentSelectedSource = filterSourceEl.value;
-    const sourcesSet = new Set(['PS Horníček']);
+    const sourcesSet = new Set(['Horníček Moravičany', 'Hrandop Litovel', 'Drozd Zábřeh']);
     items.forEach(it => {
         if (it.source_name) sourcesSet.add(it.source_name);
     });
@@ -399,7 +424,7 @@ function getFilteredAndSortedItems() {
 
         // 4. Filtr zdroje parte
         if (filterSource !== 'all') {
-            const src = item.source_name || 'PS Horníček';
+            const src = item.source_name || 'Horníček Moravičany';
             if (src !== filterSource) return false;
         }
 
@@ -503,7 +528,7 @@ function renderTable() {
     emptyState.style.display = 'none';
 
     items.forEach(item => {
-        const imgSrc = item.local_image_path ? item.local_image_path : item.image_url;
+        const imgSrc = item.local_image_path || item.release_image_url || item.image_url;
         const isMemory = item.category === 'Vzpomínka';
         const badgeClass = isMemory ? 'badge-memory' : 'badge-announcement';
 
@@ -512,7 +537,7 @@ function renderTable() {
         const dateText = item.death_date ? item.death_date : '–';
         const causeText = item.death_cause ? item.death_cause : '–';
         const ceremonyText = item.ceremony ? item.ceremony : '–';
-        const sourceName = item.source_name || 'PS Horníček';
+        const sourceName = item.source_name || 'Horníček Moravičany';
 
         // Výpočet vzdálenosti od zvoleného města/polohy
         let distBadgeHtml = '';
@@ -527,9 +552,11 @@ function renderTable() {
             }
         }
 
-        // Fotografie obličeje pod jménem (pouze pokud je na parte přítomna)
-        const faceHtml = item.face_image_path
-            ? `<img src="${escapeHtml(item.face_image_path)}" alt="Portrét ${escapeHtml(item.name)}" class="face-portrait" loading="lazy" onerror="this.style.display='none'">`
+        // Fotografie obličeje pod jménem (lokální + záloha v GitHub Releases)
+        const facePrimary = item.face_image_path || item.release_face_url;
+        const faceFallback = (item.face_image_path && item.release_face_url) ? item.release_face_url : '';
+        const faceHtml = facePrimary
+            ? `<img src="${escapeHtml(facePrimary)}" data-fallback="${escapeHtml(faceFallback)}" alt="Portrét ${escapeHtml(item.name)}" class="face-portrait" loading="lazy" onerror="if(this.dataset.fallback && this.src !== this.dataset.fallback){this.src=this.dataset.fallback;}else{this.style.display='none';}">`
             : '';
 
         const tr = document.createElement('tr');
@@ -573,9 +600,16 @@ function openModal(item, imgSrc) {
     modalTitle.textContent = `${gInfo.symbol ? gInfo.symbol + ' ' : ''}${item.name}${ageSuffix}`;
     modalTownSubtitle.textContent = item.residence ? `📍 Bydliště: ${item.residence} • ${item.category}` : item.category;
     
+    modalImg.onerror = () => {
+        if (item.release_image_url && modalImg.src !== item.release_image_url) {
+            modalImg.src = item.release_image_url;
+        } else if (item.image_url && modalImg.src !== item.image_url) {
+            modalImg.src = item.image_url;
+        }
+    };
     modalImg.src = imgSrc;
     modalImg.classList.remove('zoomed');
-    modalDownloadLink.href = imgSrc;
+    modalDownloadLink.href = item.release_image_url || imgSrc;
     modalDownloadLink.download = `parte_${sanitizeFilename(item.name)}.jpg`;
 
     let detailsHtml = '';

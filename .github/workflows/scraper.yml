@@ -49,6 +49,22 @@ jobs:
         run: |
           python scraper/scraper.py
 
+      - name: Nahrání fotek parte a obličejů do GitHub Releases (neomezené úložiště)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view parte-images >/dev/null 2>&1 || gh release create parte-images --title "Úložiště fotek parte a obličejů" --notes "Automatické úložiště obrázků parte a výřezů obličejů mimo Git limit."
+          if ls data/images/*.jpg >/dev/null 2>&1; then
+            gh release upload parte-images data/images/*.jpg --clobber
+          fi
+          if ls data/images/faces/*.jpg >/dev/null 2>&1; then
+            mkdir -p /tmp/release_faces
+            for f in data/images/faces/*.jpg; do
+              cp "$f" "/tmp/release_faces/face_$(basename "$f")"
+            done
+            gh release upload parte-images /tmp/release_faces/face_*.jpg --clobber
+          fi
+
       - name: Příprava složky pro GitHub Pages
         run: |
           # Zkopírovat data a obrázky do web/ pro hosting na GitHub Pages
