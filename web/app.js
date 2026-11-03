@@ -110,9 +110,17 @@ const emptyState = document.getElementById('emptyState');
 const refreshBtn = document.getElementById('refreshBtn');
 const lastUpdatedEl = document.getElementById('lastUpdated');
 
-// Počítadla
+// Počítadla a pohledy
 const countActive = document.getElementById('countActive');
 const countArchive = document.getElementById('countArchive');
+const countStats = document.getElementById('countStats');
+const tableContainer = document.getElementById('tableContainer');
+const statsView = document.getElementById('statsView');
+const statsKpiGrid = document.getElementById('statsKpiGrid');
+const statsTownTableBody = document.getElementById('statsTownTableBody');
+const statsScopeInfo = document.getElementById('statsScopeInfo');
+let statsTimeGranularity = 'week'; // 'week' | 'day' | 'month'
+let activeCharts = {};
 
 // Modal prvky
 const modal = document.getElementById('imageModal');
@@ -334,6 +342,38 @@ function triggerGpsLocation() {
     );
 }
 
+// Pravidlo archivace: parte je aktuální po dobu 1 týdne (7 dní) od data úmrtí,
+// bez ohledu na to, zda je či není jako aktuální na některém ze zdrojových webů.
+function applySevenDayArchivingRule(items) {
+    const now = new Date();
+    let refTodayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+
+    // Pokud by datum v databázi bylo novější než hodiny prohlížeče, vezmeme nejnovější datum v DB
+    items.forEach(it => {
+        const iso = (it.death_date_iso || '').trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+            const [y, m, d] = iso.split('-').map(Number);
+            const t = Date.UTC(y, m - 1, d);
+            if (t > refTodayUtc) refTodayUtc = t;
+        }
+    });
+
+    items.forEach(item => {
+        let refIso = (item.death_date_iso || '').trim();
+        if (!refIso && item.first_seen && item.first_seen.length >= 10) {
+            refIso = item.first_seen.slice(0, 10);
+        }
+        if (/^\d{4}-\d{2}-\d{2}$/.test(refIso)) {
+            const [y, m, d] = refIso.split('-').map(Number);
+            const itemUtc = Date.UTC(y, m - 1, d);
+            const diffDays = Math.floor((refTodayUtc - itemUtc) / (1000 * 60 * 60 * 24));
+            const isRecent = diffDays <= 7;
+            item.is_active = isRecent;
+            item.is_archived = !isRecent;
+        }
+    });
+}
+
 // Načtení databáze
 async function fetchDatabase() {
     statsBadge.textContent = 'Načítám data...';
@@ -356,6 +396,7 @@ async function fetchDatabase() {
 
     if (loadedData) {
         allItems = loadedData;
+        applySevenDayArchivingRule(allItems);
         populateFilterDropdowns(allItems);
         updateCounts();
         updateLastSeen(allItems);
@@ -394,8 +435,10 @@ function updateLastSeen(items) {
 function updateCounts() {
     const activeCount = allItems.filter(i => i.is_active && (!hideMemories || i.category !== 'Vzpomínka')).length;
     const archiveCount = allItems.filter(i => i.is_archived && (!hideMemories || i.category !== 'Vzpomínka')).length;
+    const statsCount = allItems.filter(i => i.category !== 'Vzpomínka').length;
     countActive.textContent = activeCount;
     countArchive.textContent = archiveCount;
+    if (countStats) countStats.textContent = statsCount;
 }
 
 function formatGenderSymbol(gender) {
@@ -405,13 +448,15 @@ function formatGenderSymbol(gender) {
     return { symbol: '', cls: '', label: '' };
 }
 
-function getFilteredAndSortedItems() {
+function getFilteredAndSortedItems(ignoreTab = false) {
     const centerCoords = getFilterCenterCoords();
 
     const filtered = allItems.filter(item => {
-        // 1. Záložka: Aktuální vývěska vs Archiv
-        if (currentTab === 'active' && !item.is_active) return false;
-        if (currentTab === 'archive' && !item.is_archived) return false;
+        // 1. Záložka: Aktuální vývěska vs Archiv (ve statistice bereme všechna období dohromady)
+        if (!ignoreTab && currentTab !== 'stats') {
+            if (currentTab === 'active' && !item.is_active) return false;
+            if (currentTab === 'archive' && !item.is_archived) return false;
+        }
 
         // 2. Skrýt vzpomínky
         if (hideMemories && item.category === 'Vzpomínka') return false;
@@ -507,17 +552,31 @@ function updateFilterUiState() {
     activeFilterSummary.textContent = parts.length > 0 ? `Aktivní filtr: ${parts.join(' • ')}` : '';
 }
 
-// Vykreslení tabulky
+// Vykreslení tabulky nebo statistického přehledu
 function renderTable() {
     updateCounts();
     updateFilterUiState();
+
+    if (currentTab === 'stats') {
+        if (tableContainer) tableContainer.style.display = 'none';
+        emptyState.style.display = 'none';
+        if (statsView) statsView.style.display = 'flex';
+        sectionTitle.textContent = 'Statistika a grafický přehled v čase';
+        renderStatisticsView();
+        return;
+    }
+
+    if (statsView) statsView.style.display = 'none';
+    if (tableContainer) tableContainer.style.display = 'block';
 
     const items = getFilteredAndSortedItems();
     const centerCoords = getFilterCenterCoords();
     tableBody.innerHTML = '';
 
     const isCurrentActive = currentTab === 'active';
-    sectionTitle.textContent = isCurrentActive ? 'Aktuální smuteční oznámení (Vývěska)' : 'Archiv parte';
+    sectionTitle.textContent = isCurrentActive
+        ? 'Aktuální smuteční oznámení (Vývěska) – aktuální po dobu 1 týdne od úmrtí'
+        : 'Archiv parte (starší než 1 týden od úmrtí)';
     statsBadge.textContent = `${items.length} ${getNoun(items.length, 'záznam', 'záznamy', 'záznamů')}`;
 
     if (items.length === 0) {
@@ -892,5 +951,872 @@ if ('serviceWorker' in navigator) {
         });
     }
 }
+
+// ==================== STATISTIKA A GRAFY V ČASE ====================
+
+const CZECH_MONTHS_MAP = {
+    'ledna': 1, 'unora': 2, 'února': 2, 'brezna': 3, 'března': 3,
+    'dubna': 4, 'kvetna': 5, 'května': 5, 'cervna': 6, 'června': 6,
+    'cervence': 7, 'července': 7, 'srpna': 8, 'zari': 9, 'září': 9,
+    'rijna': 10, 'října': 10, 'listopadu': 11, 'prosince': 12
+};
+
+function parseAgeNumber(item) {
+    if (!item || !item.age) return null;
+    const m = String(item.age).match(/(\d{1,3})/);
+    if (!m) return null;
+    const val = parseInt(m[1], 10);
+    return (val >= 0 && val <= 115) ? val : null;
+}
+
+function calcAvg(arr) {
+    if (!arr || arr.length === 0) return null;
+    return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+function calcMedian(arr) {
+    if (!arr || arr.length === 0) return null;
+    const s = [...arr].sort((a, b) => a - b);
+    const mid = Math.floor(s.length / 2);
+    return s.length % 2 !== 0 ? s[mid] : (s[mid - 1] + s[mid]) / 2;
+}
+
+function classifyDeathCause(item) {
+    const c = normalizeStr((item.death_cause || '') + ' ' + (item.raw_text || ''));
+    if (c.includes('tragick')) return 'Tragicky';
+    if (c.includes('kratk') && c.includes('nemoc')) return 'Po krátké nemoci';
+    if ((c.includes('dlouh') || c.includes('delsi') || c.includes('tezke')) && c.includes('nemoc')) return 'Po dlouhé / těžké nemoci';
+    if (c.includes('nahle') || c.includes('necekane') || c.includes('neocekavane')) return 'Náhle a neočekávaně';
+    if (c.includes('tise') || c.includes('spanek') || c.includes('spanku')) return 'Tiše / ve spánku';
+    return 'Neuvedeno na parte';
+}
+
+function classifyCeremonyPlace(item) {
+    const c = normalizeStr((item.ceremony || '') + ' ' + (item.raw_text || ''));
+    if (c.includes('rodinnem kruhu') || c.includes('bez smutecniho obradu') || c.includes('tichou vzpominkou') || c.includes('tiche rozlouceni')) {
+        return 'Bez obřadu (v rodinném kruhu)';
+    }
+    if (c.includes('kostel') || c.includes('chram')) return 'Kostel / chrám Páně';
+    if (c.includes('mohelnic')) return 'Obřadní síň Mohelnice';
+    if (c.includes('zabreh') || c.includes('zabreze')) return 'Obřadní síň Zábřeh';
+    if (c.includes('litovl') || c.includes('litovel')) return 'Obřadní síň Litovel';
+    if (c.includes('sumperk') || c.includes('olomouc') || c.includes('krematori')) return 'Krematorium Šumperk / Olomouc';
+    return 'Jiné / upřesněno rodinou';
+}
+
+function parseFuneralDelayDays(item) {
+    const deathIso = (item.death_date_iso || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(deathIso)) return null;
+    const [dy, dm, dd] = deathIso.split('-').map(Number);
+    const deathUtc = Date.UTC(dy, dm - 1, dd);
+
+    const cerText = (item.ceremony || '') + ' ' + (item.raw_text || '');
+    const normCer = normalizeStr(cerText);
+    if (normCer.includes('rodinnem kruhu') || normCer.includes('bez smutecniho obradu') || normCer.includes('tiche rozlouceni')) {
+        return 'no_ceremony';
+    }
+
+    // Hledání data v pasáži o posledním rozloučení
+    const rozlSplit = cerText.split(/rozlou[čc][ií]me|rozlou[čc]en[ií]|poh[řr]eb/i);
+    const searchZone = rozlSplit.length > 1 ? rozlSplit.slice(1).join(' ') : (item.ceremony || '');
+
+    let cDay = null, cMonth = null, cYear = dy;
+    const mNum = searchZone.match(/(\d{1,2})\.\s*(\d{1,2})\.(?:\s*(\d{4}))?/);
+    if (mNum) {
+        cDay = parseInt(mNum[1], 10);
+        cMonth = parseInt(mNum[2], 10);
+        if (mNum[3]) cYear = parseInt(mNum[3], 10);
+    } else {
+        const mWord = searchZone.match(/(\d{1,2})\.\s*([a-záčďéěíňóřšťúůýž]+)(?:\s*(\d{4}))?/i);
+        if (mWord) {
+            const w = mWord[2].toLowerCase();
+            const wNorm = normalizeStr(w);
+            if (CZECH_MONTHS_MAP[w] || CZECH_MONTHS_MAP[wNorm]) {
+                cDay = parseInt(mWord[1], 10);
+                cMonth = CZECH_MONTHS_MAP[w] || CZECH_MONTHS_MAP[wNorm];
+                if (mWord[3]) cYear = parseInt(mWord[3], 10);
+            }
+        }
+    }
+
+    if (cDay && cMonth) {
+        const cerUtc = Date.UTC(cYear, cMonth - 1, cDay);
+        const diff = Math.round((cerUtc - deathUtc) / (1000 * 60 * 60 * 24));
+        if (diff >= 1 && diff <= 21) return diff;
+    }
+    return null;
+}
+
+function getTimeBucketKeyAndLabel(isoDate, granularity) {
+    const [y, m, d] = isoDate.split('-').map(Number);
+    if (granularity === 'day') {
+        return {
+            key: isoDate,
+            label: `${String(d).padStart(2, '0')}. ${String(m).padStart(2, '0')}.`
+        };
+    }
+    if (granularity === 'month') {
+        const monthNames = ['', 'Leden', 'Únor', 'Březen', 'Duben', 'Květen', 'Červen', 'Červenec', 'Srpen', 'Září', 'Říjen', 'Listopad', 'Prosinec'];
+        return {
+            key: `${y}-${String(m).padStart(2, '0')}`,
+            label: `${monthNames[m]} ${y}`
+        };
+    }
+    // Výchozí: Po týdnech (pondělí daného týdne)
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    const dayOfWeek = (dt.getUTCDay() + 6) % 7; // 0 = Pondělí .. 6 = Neděle
+    const monday = new Date(dt.getTime() - dayOfWeek * 86400000);
+    const sunday = new Date(monday.getTime() + 6 * 86400000);
+    const wy = monday.getUTCFullYear();
+    const wm = monday.getUTCMonth() + 1;
+    const wd = monday.getUTCDate();
+    const sm = sunday.getUTCMonth() + 1;
+    const sd = sunday.getUTCDate();
+    return {
+        key: `${wy}-${String(wm).padStart(2, '0')}-${String(wd).padStart(2, '0')}`,
+        label: `${wd}.${wm}.–${sd}.${sm}.`
+    };
+}
+
+function destroyChart(id) {
+    if (activeCharts[id]) {
+        activeCharts[id].destroy();
+        delete activeCharts[id];
+    }
+}
+
+function renderStatisticsView() {
+    if (typeof Chart === 'undefined') return;
+
+    const items = getFilteredAndSortedItems(true).filter(i => i.category !== 'Vzpomínka');
+    statsBadge.textContent = `${items.length} ${getNoun(items.length, 'parte', 'parte', 'parte')} ve statistice`;
+
+    // Nastavení výchozích barev Chart.js pro tmavý režim
+    Chart.defaults.color = '#94a3b8';
+    Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.07)';
+    Chart.defaults.font.family = "'Inter', system-ui, sans-serif";
+
+    const datedItems = items
+        .filter(i => /^\d{4}-\d{2}-\d{2}$/.test(i.death_date_iso || ''))
+        .sort((a, b) => a.death_date_iso.localeCompare(b.death_date_iso));
+
+    const firstDateText = datedItems.length > 0 ? datedItems[0].death_date : '–';
+    const lastDateText = datedItems.length > 0 ? datedItems[datedItems.length - 1].death_date : '–';
+
+    if (statsScopeInfo) {
+        statsScopeInfo.innerHTML = `Analyzováno <strong>${items.length} smutečních oznámení</strong> v období od <strong>${escapeHtml(firstDateText)}</strong> do <strong>${escapeHtml(lastDateText)}</strong> (bez výročních vzpomínek).`;
+    }
+
+    // 1. Výpočet věkových a demografických metrik
+    const allAges = [];
+    const femaleAges = [];
+    const maleAges = [];
+    let femaleCount = 0;
+    let maleCount = 0;
+    let youngestItem = null;
+    let oldestItem = null;
+
+    items.forEach(it => {
+        const g = it.gender;
+        if (g === 'F') femaleCount++;
+        else if (g === 'M') maleCount++;
+        else if (g === 'MF') { femaleCount++; maleCount++; }
+
+        const age = parseAgeNumber(it);
+        if (age != null) {
+            allAges.push(age);
+            if (g === 'F') femaleAges.push(age);
+            if (g === 'M') maleAges.push(age);
+            if (!youngestItem || age < youngestItem.ageNum) youngestItem = { item: it, ageNum: age };
+            if (!oldestItem || age > oldestItem.ageNum) oldestItem = { item: it, ageNum: age };
+        }
+    });
+
+    const avgAll = calcAvg(allAges);
+    const medAll = calcMedian(allAges);
+    const avgF = calcAvg(femaleAges);
+    const avgM = calcAvg(maleAges);
+    const genderDiff = (avgF != null && avgM != null) ? (avgF - avgM) : null;
+
+    // Odstup pohřbu od úmrtí
+    const delays = [];
+    let noCeremonyCount = 0;
+    items.forEach(it => {
+        const d = parseFuneralDelayDays(it);
+        if (d === 'no_ceremony') noCeremonyCount++;
+        else if (typeof d === 'number') delays.push(d);
+    });
+    const avgDelay = calcAvg(delays);
+
+    // Nejčastější obec a den v týdnu
+    const townCounts = {};
+    items.forEach(it => {
+        if (it.residence) {
+            townCounts[it.residence] = (townCounts[it.residence] || 0) + 1;
+        }
+    });
+    const sortedTownEntries = Object.entries(townCounts).sort((a, b) => b[1] - a[1]);
+    const topTown = sortedTownEntries.length > 0 ? sortedTownEntries[0] : ['–', 0];
+
+    const dayNames = ['Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota', 'Neděle'];
+    const dayCountsF = [0, 0, 0, 0, 0, 0, 0];
+    const dayCountsM = [0, 0, 0, 0, 0, 0, 0];
+    datedItems.forEach(it => {
+        const [y, m, d] = it.death_date_iso.split('-').map(Number);
+        const dt = new Date(Date.UTC(y, m - 1, d));
+        const dow = (dt.getUTCDay() + 6) % 7;
+        if (it.gender === 'F') dayCountsF[dow]++;
+        else dayCountsM[dow]++;
+    });
+    const dayTotals = dayCountsF.map((f, idx) => f + dayCountsM[idx]);
+    let maxDowIdx = 0;
+    dayTotals.forEach((cnt, idx) => { if (cnt > dayTotals[maxDowIdx]) maxDowIdx = idx; });
+
+    const activeLast7Count = items.filter(i => i.is_active).length;
+    const totalGenderCount = Math.max(1, femaleCount + maleCount);
+    const fPct = Math.round((femaleCount / totalGenderCount) * 100);
+    const mPct = 100 - fPct;
+
+    // Vykreslení KPI karet
+    if (statsKpiGrid) {
+        statsKpiGrid.innerHTML = `
+            <div class="kpi-card">
+                <span class="kpi-label">Průměrný věk dožití</span>
+                <div class="kpi-value">${avgAll != null ? avgAll.toFixed(1) : '–'} <span class="kpi-unit">let (medián ${medAll != null ? medAll.toFixed(0) : '–'} let)</span></div>
+                <div class="kpi-sub">
+                    <span class="f-tag">♀ Ženy: ${avgF != null ? avgF.toFixed(1) + ' let' : '–'}</span> •
+                    <span class="m-tag">♂ Muži: ${avgM != null ? avgM.toFixed(1) + ' let' : '–'}</span>
+                    ${genderDiff != null ? `<br>Ženy se dožívají v průměru o <strong>${Math.abs(genderDiff).toFixed(1)} let ${genderDiff >= 0 ? 'více' : 'méně'}</strong>` : ''}
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Poměr pohlaví (♀ vs. ♂)</span>
+                <div class="kpi-value">${femaleCount} <span class="kpi-unit">žen (${fPct} %)</span> : ${maleCount} <span class="kpi-unit">mužů (${mPct} %)</span></div>
+                <div class="kpi-sub">
+                    Celkem <strong>${items.length}</strong> oznámení • Za posledních 7 dní od úmrtí: <strong>${activeLast7Count}</strong> aktuálních
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Nejvyšší a nejnižší věk</span>
+                <div class="kpi-value">${oldestItem ? oldestItem.ageNum : '–'} <span class="kpi-unit">let max</span> / ${youngestItem ? youngestItem.ageNum : '–'} <span class="kpi-unit">let min</span></div>
+                <div class="kpi-sub">
+                    Nejstarší: <strong>${oldestItem ? escapeHtml(oldestItem.item.name) : '–'}</strong> (${oldestItem && oldestItem.item.residence ? escapeHtml(oldestItem.item.residence) : '–'})<br>
+                    Nejmladší: <strong>${youngestItem ? escapeHtml(youngestItem.item.name) : '–'}</strong> (${youngestItem && youngestItem.item.residence ? escapeHtml(youngestItem.item.residence) : '–'})
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Odstup pohřbu a obřady</span>
+                <div class="kpi-value">${avgDelay != null ? avgDelay.toFixed(1) : '–'} <span class="kpi-unit">dne od úmrtí do pohřbu</span></div>
+                <div class="kpi-sub">
+                    Bez obřadu (v rodinném kruhu): <strong>${noCeremonyCount}× (${Math.round((noCeremonyCount / Math.max(1, items.length)) * 100)} %)</strong><br>
+                    Nejčastější den úmrtí: <strong>${dayNames[maxDowIdx]} (${dayTotals[maxDowIdx]}×)</strong>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Nejčastější město / obec</span>
+                <div class="kpi-value">${escapeHtml(topTown[0])} <span class="kpi-unit">(${topTown[1]} parte)</span></div>
+                <div class="kpi-sub">
+                    Celkem zastoupeno <strong>${sortedTownEntries.length} různých měst a obcí</strong> v regionu
+                </div>
+            </div>
+        `;
+    }
+
+    // 2. Seskupení dat v čase (Po týdnech / Po dnech / Po měsících)
+    const timeBucketsMap = new Map();
+    datedItems.forEach(it => {
+        const { key, label } = getTimeBucketKeyAndLabel(it.death_date_iso, statsTimeGranularity);
+        if (!timeBucketsMap.has(key)) {
+            timeBucketsMap.set(key, { key, label, fCount: 0, mCount: 0, fAges: [], mAges: [], allAges: [] });
+        }
+        const b = timeBucketsMap.get(key);
+        if (it.gender === 'F') b.fCount++;
+        else b.mCount++;
+
+        const age = parseAgeNumber(it);
+        if (age != null) {
+            b.allAges.push(age);
+            if (it.gender === 'F') b.fAges.push(age);
+            else if (it.gender === 'M') b.mAges.push(age);
+        }
+    });
+
+    const timeBuckets = Array.from(timeBucketsMap.values()).sort((a, b) => a.key.localeCompare(b.key));
+    const timeLabels = timeBuckets.map(b => b.label);
+    const timeFCounts = timeBuckets.map(b => b.fCount);
+    const timeMCounts = timeBuckets.map(b => b.mCount);
+    let runningTotal = 0;
+    const timeCumulative = timeBuckets.map(b => {
+        runningTotal += (b.fCount + b.mCount);
+        return runningTotal;
+    });
+
+    // GRAF 1: Vývoj počtu úmrtí v čase (Ženy vs. Muži + kumulativní křivka)
+    destroyChart('chartDeathsOverTime');
+    const ctx1 = document.getElementById('chartDeathsOverTime');
+    if (ctx1) {
+        activeCharts['chartDeathsOverTime'] = new Chart(ctx1, {
+            type: 'bar',
+            data: {
+                labels: timeLabels,
+                datasets: [
+                    {
+                        label: '♀ Ženy',
+                        data: timeFCounts,
+                        backgroundColor: 'rgba(244, 114, 182, 0.78)',
+                        borderColor: '#f472b6',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        stack: 'genderStack',
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: '♂ Muži',
+                        data: timeMCounts,
+                        backgroundColor: 'rgba(96, 165, 250, 0.78)',
+                        borderColor: '#60a5fa',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        stack: 'genderStack',
+                        yAxisID: 'y'
+                    },
+                    {
+                        type: 'line',
+                        label: 'Kumulativní počet úmrtí v čase',
+                        data: timeCumulative,
+                        borderColor: '#fbbf24',
+                        backgroundColor: 'rgba(251, 191, 36, 0.15)',
+                        borderWidth: 2.5,
+                        pointRadius: 3.5,
+                        tension: 0.25,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { stacked: true },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 },
+                        title: { display: true, text: 'Počet úmrtí za období' }
+                    },
+                    y1: {
+                        position: 'right',
+                        beginAtZero: true,
+                        grid: { drawOnChartArea: false },
+                        title: { display: true, text: 'Kumulativně celkem' }
+                    }
+                }
+            }
+        });
+    }
+
+    // GRAF 2: Vývoj průměrného věku úmrtí v čase (♀ Ženy vs. ♂ Muži vs. Celkem)
+    destroyChart('chartAgeOverTime');
+    const ctx2 = document.getElementById('chartAgeOverTime');
+    if (ctx2) {
+        const avgAgeFSeries = timeBuckets.map(b => b.fAges.length ? Number(calcAvg(b.fAges).toFixed(1)) : null);
+        const avgAgeMSeries = timeBuckets.map(b => b.mAges.length ? Number(calcAvg(b.mAges).toFixed(1)) : null);
+        const avgAgeAllSeries = timeBuckets.map(b => b.allAges.length ? Number(calcAvg(b.allAges).toFixed(1)) : null);
+
+        activeCharts['chartAgeOverTime'] = new Chart(ctx2, {
+            type: 'line',
+            data: {
+                labels: timeLabels,
+                datasets: [
+                    {
+                        label: '♀ Průměrný věk Ženy (let)',
+                        data: avgAgeFSeries,
+                        borderColor: '#f472b6',
+                        backgroundColor: 'rgba(244, 114, 182, 0.2)',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        spanGaps: true,
+                        tension: 0.25
+                    },
+                    {
+                        label: '♂ Průměrný věk Muži (let)',
+                        data: avgAgeMSeries,
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.2)',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        spanGaps: true,
+                        tension: 0.25
+                    },
+                    {
+                        label: 'Celkový průměrný věk (let)',
+                        data: avgAgeAllSeries,
+                        borderColor: '#fbbf24',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        spanGaps: true,
+                        tension: 0.25
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    y: {
+                        suggestedMin: 50,
+                        suggestedMax: 98,
+                        title: { display: true, text: 'Věk při úmrtí (roky)' }
+                    }
+                }
+            }
+        });
+    }
+
+    // GRAF 3: Bodový graf jednotlivých úmrtí v čase (Datum úmrtí vs. Věk vs. Pohlaví)
+    destroyChart('chartScatterTimeAge');
+    const ctx3 = document.getElementById('chartScatterTimeAge');
+    if (ctx3) {
+        const uniqueDates = Array.from(new Set(datedItems.map(i => i.death_date_iso))).sort();
+        const dateLabels = uniqueDates.map(iso => {
+            const [y, m, d] = iso.split('-');
+            return `${d}. ${m}. ${y}`;
+        });
+
+        const scatterF = [];
+        const scatterM = [];
+        datedItems.forEach(it => {
+            const age = parseAgeNumber(it);
+            if (age == null) return;
+            const xIdx = uniqueDates.indexOf(it.death_date_iso);
+            const pointObj = {
+                x: xIdx,
+                y: age,
+                item: it
+            };
+            if (it.gender === 'F') scatterF.push(pointObj);
+            else scatterM.push(pointObj);
+        });
+
+        activeCharts['chartScatterTimeAge'] = new Chart(ctx3, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        label: '♀ Ženy (jednotlivá úmrtí v čase)',
+                        data: scatterF,
+                        backgroundColor: 'rgba(244, 114, 182, 0.88)',
+                        borderColor: '#f472b6',
+                        pointRadius: 6,
+                        pointHoverRadius: 9
+                    },
+                    {
+                        label: '♂ Muži (jednotlivá úmrtí v čase)',
+                        data: scatterM,
+                        backgroundColor: 'rgba(96, 165, 250, 0.88)',
+                        borderColor: '#60a5fa',
+                        pointRadius: 6,
+                        pointHoverRadius: 9
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                onClick: (evt, elements) => {
+                    if (elements && elements.length > 0) {
+                        const el = elements[0];
+                        const ds = activeCharts['chartScatterTimeAge'].data.datasets[el.datasetIndex];
+                        const pt = ds.data[el.index];
+                        if (pt && pt.item) {
+                            const imgSrc = pt.item.local_image_path || pt.item.release_image_url || pt.item.image_url;
+                            openModal(pt.item, imgSrc);
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: (ctx) => {
+                                const pt = ctx.raw;
+                                if (!pt || !pt.item) return '';
+                                const it = pt.item;
+                                const town = it.residence ? ` • 📍 ${it.residence}` : '';
+                                const cause = it.death_cause ? ` • ${it.death_cause}` : '';
+                                return `${it.name} (${pt.y} let)${town} • Úmrtí: ${it.death_date}${cause}`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        min: -0.5,
+                        max: Math.max(0, uniqueDates.length - 0.5),
+                        ticks: {
+                            stepSize: 1,
+                            callback: (val) => {
+                                const idx = Math.round(val);
+                                return dateLabels[idx] || '';
+                            }
+                        },
+                        title: { display: true, text: 'Datum úmrtí v čase (kliknutím na bod otevřete parte)' }
+                    },
+                    y: {
+                        suggestedMin: 40,
+                        suggestedMax: 100,
+                        title: { display: true, text: 'Věk při úmrtí (let)' }
+                    }
+                }
+            }
+        });
+    }
+
+    // GRAF 4: Pohlaví vs. Věk úmrtí (Věkové skupiny)
+    destroyChart('chartGenderAgeBuckets');
+    const ctx4 = document.getElementById('chartGenderAgeBuckets');
+    if (ctx4) {
+        const brackets = [
+            { label: 'do 49 let', min: 0, max: 49 },
+            { label: '50–59 let', min: 50, max: 59 },
+            { label: '60–69 let', min: 60, max: 69 },
+            { label: '70–79 let', min: 70, max: 79 },
+            { label: '80–89 let', min: 80, max: 89 },
+            { label: '90 a více let', min: 90, max: 200 }
+        ];
+        const fBucketCounts = brackets.map(() => 0);
+        const mBucketCounts = brackets.map(() => 0);
+
+        items.forEach(it => {
+            const age = parseAgeNumber(it);
+            if (age == null) return;
+            const bIdx = brackets.findIndex(b => age >= b.min && age <= b.max);
+            if (bIdx !== -1) {
+                if (it.gender === 'F') fBucketCounts[bIdx]++;
+                else mBucketCounts[bIdx]++;
+            }
+        });
+
+        activeCharts['chartGenderAgeBuckets'] = new Chart(ctx4, {
+            type: 'bar',
+            data: {
+                labels: brackets.map(b => b.label),
+                datasets: [
+                    {
+                        label: '♀ Ženy',
+                        data: fBucketCounts,
+                        backgroundColor: 'rgba(244, 114, 182, 0.8)',
+                        borderColor: '#f472b6',
+                        borderWidth: 1,
+                        borderRadius: 5
+                    },
+                    {
+                        label: '♂ Muži',
+                        data: mBucketCounts,
+                        backgroundColor: 'rgba(96, 165, 250, 0.8)',
+                        borderColor: '#60a5fa',
+                        borderWidth: 1,
+                        borderRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: 'Počet osob' } }
+                }
+            }
+        });
+    }
+
+    // GRAF 5: Statistika podle měst a obcí (Počet ♀/♂ + Průměrný věk v obci) + Tabulka obcí
+    const townMap = new Map();
+    items.forEach(it => {
+        const town = it.residence || 'Neuvedeno';
+        if (!townMap.has(town)) {
+            townMap.set(town, { town, total: 0, fCount: 0, mCount: 0, fAges: [], mAges: [], allAges: [] });
+        }
+        const st = townMap.get(town);
+        st.total++;
+        if (it.gender === 'F') st.fCount++;
+        else st.mCount++;
+        const age = parseAgeNumber(it);
+        if (age != null) {
+            st.allAges.push(age);
+            if (it.gender === 'F') st.fAges.push(age);
+            else st.mAges.push(age);
+        }
+    });
+
+    const townStatsArr = Array.from(townMap.values())
+        .filter(t => t.town !== 'Neuvedeno')
+        .sort((a, b) => b.total - a.total || a.town.localeCompare(b.town, 'cs'));
+
+    destroyChart('chartTownsStats');
+    const ctx5 = document.getElementById('chartTownsStats');
+    if (ctx5) {
+        const topTowns = townStatsArr.slice(0, 14);
+        activeCharts['chartTownsStats'] = new Chart(ctx5, {
+            type: 'bar',
+            data: {
+                labels: topTowns.map(t => t.town),
+                datasets: [
+                    {
+                        label: '♀ Ženy',
+                        data: topTowns.map(t => t.fCount),
+                        backgroundColor: 'rgba(244, 114, 182, 0.8)',
+                        stack: 'townStack',
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: '♂ Muži',
+                        data: topTowns.map(t => t.mCount),
+                        backgroundColor: 'rgba(96, 165, 250, 0.8)',
+                        stack: 'townStack',
+                        yAxisID: 'y'
+                    },
+                    {
+                        type: 'line',
+                        label: 'Průměrný věk v obci (let)',
+                        data: topTowns.map(t => t.allAges.length ? Number(calcAvg(t.allAges).toFixed(1)) : null),
+                        borderColor: '#fbbf24',
+                        backgroundColor: '#fbbf24',
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        spanGaps: true,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: 'Počet úmrtí' } },
+                    y1: { position: 'right', suggestedMin: 55, suggestedMax: 95, grid: { drawOnChartArea: false }, title: { display: true, text: 'Průměrný věk (let)' } }
+                }
+            }
+        });
+    }
+
+    // Naplnění podrobné tabulky obcí
+    if (statsTownTableBody) {
+        statsTownTableBody.innerHTML = townStatsArr.map(t => {
+            const avgT = calcAvg(t.allAges);
+            const medT = calcMedian(t.allAges);
+            const avgTF = calcAvg(t.fAges);
+            const avgTM = calcAvg(t.mAges);
+            const minA = t.allAges.length ? Math.min(...t.allAges) : null;
+            const maxA = t.allAges.length ? Math.max(...t.allAges) : null;
+            return `
+                <tr>
+                    <td><strong>📍 ${escapeHtml(t.town)}</strong></td>
+                    <td><strong>${t.total}</strong></td>
+                    <td><span style="color:#f472b6;font-weight:600;">${t.fCount}×</span> ${avgTF != null ? `(${avgTF.toFixed(1)} let)` : ''}</td>
+                    <td><span style="color:#60a5fa;font-weight:600;">${t.mCount}×</span> ${avgTM != null ? `(${avgTM.toFixed(1)} let)` : ''}</td>
+                    <td><strong>${avgT != null ? avgT.toFixed(1) + ' let' : '–'}</strong></td>
+                    <td>${medT != null ? medT.toFixed(0) + ' let' : '–'}</td>
+                    <td>${minA != null ? `${minA} – ${maxA} let` : '–'}</td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    // GRAF 6: Okolnosti a důvody úmrtí vs. Průměrný věk
+    destroyChart('chartCausesStats');
+    const ctx6 = document.getElementById('chartCausesStats');
+    if (ctx6) {
+        const causeMap = new Map();
+        items.forEach(it => {
+            const cat = classifyDeathCause(it);
+            if (!causeMap.has(cat)) causeMap.set(cat, { cat, count: 0, ages: [] });
+            const obj = causeMap.get(cat);
+            obj.count++;
+            const age = parseAgeNumber(it);
+            if (age != null) obj.ages.push(age);
+        });
+        const causeArr = Array.from(causeMap.values()).sort((a, b) => b.count - a.count);
+
+        activeCharts['chartCausesStats'] = new Chart(ctx6, {
+            type: 'bar',
+            data: {
+                labels: causeArr.map(c => c.cat),
+                datasets: [
+                    {
+                        label: 'Počet úmrtí',
+                        data: causeArr.map(c => c.count),
+                        backgroundColor: 'rgba(217, 119, 6, 0.72)',
+                        borderColor: '#f59e0b',
+                        borderWidth: 1,
+                        borderRadius: 5,
+                        yAxisID: 'y'
+                    },
+                    {
+                        type: 'line',
+                        label: 'Průměrný věk (let)',
+                        data: causeArr.map(c => c.ages.length ? Number(calcAvg(c.ages).toFixed(1)) : null),
+                        borderColor: '#38bdf8',
+                        backgroundColor: '#38bdf8',
+                        borderWidth: 2.5,
+                        pointRadius: 4,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: 'Počet osob' } },
+                    y1: { position: 'right', suggestedMin: 50, suggestedMax: 95, grid: { drawOnChartArea: false }, title: { display: true, text: 'Průměrný věk (let)' } }
+                }
+            }
+        });
+    }
+
+    // GRAF 7: Úmrtí podle dne v týdnu (Pondělí – Neděle)
+    destroyChart('chartDayOfWeek');
+    const ctx7 = document.getElementById('chartDayOfWeek');
+    if (ctx7) {
+        activeCharts['chartDayOfWeek'] = new Chart(ctx7, {
+            type: 'bar',
+            data: {
+                labels: dayNames,
+                datasets: [
+                    {
+                        label: '♀ Ženy',
+                        data: dayCountsF,
+                        backgroundColor: 'rgba(244, 114, 182, 0.8)',
+                        stack: 'dowStack',
+                        borderRadius: 4
+                    },
+                    {
+                        label: '♂ Muži',
+                        data: dayCountsM,
+                        backgroundColor: 'rgba(96, 165, 250, 0.8)',
+                        stack: 'dowStack',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: 'Počet úmrtí' } }
+                }
+            }
+        });
+    }
+
+    // GRAF 8: Odstup pohřbu od úmrtí (počet dní)
+    destroyChart('chartFuneralDelay');
+    const ctx8 = document.getElementById('chartFuneralDelay');
+    if (ctx8) {
+        const delayLabels = ['2–3 dny', '4 dny', '5 dní', '6 dní', '7 dní', '8 a více dní', 'Bez obřadu'];
+        const delayCounts = [0, 0, 0, 0, 0, 0, 0];
+        items.forEach(it => {
+            const d = parseFuneralDelayDays(it);
+            if (d === 'no_ceremony') delayCounts[6]++;
+            else if (typeof d === 'number') {
+                if (d <= 3) delayCounts[0]++;
+                else if (d === 4) delayCounts[1]++;
+                else if (d === 5) delayCounts[2]++;
+                else if (d === 6) delayCounts[3]++;
+                else if (d === 7) delayCounts[4]++;
+                else delayCounts[5]++;
+            }
+        });
+
+        activeCharts['chartFuneralDelay'] = new Chart(ctx8, {
+            type: 'bar',
+            data: {
+                labels: delayLabels,
+                datasets: [
+                    {
+                        label: 'Počet pohřbů / rozloučení',
+                        data: delayCounts,
+                        backgroundColor: [
+                            'rgba(96, 165, 250, 0.75)',
+                            'rgba(96, 165, 250, 0.82)',
+                            'rgba(251, 191, 36, 0.85)',
+                            'rgba(245, 158, 11, 0.85)',
+                            'rgba(244, 114, 182, 0.8)',
+                            'rgba(167, 139, 250, 0.8)',
+                            'rgba(148, 163, 184, 0.65)'
+                        ],
+                        borderRadius: 5
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 }, title: { display: true, text: 'Počet parte' } }
+                }
+            }
+        });
+    }
+
+    // GRAF 9: Místa posledního rozloučení
+    destroyChart('chartCeremonyPlaces');
+    const ctx9 = document.getElementById('chartCeremonyPlaces');
+    if (ctx9) {
+        const placeCounts = {};
+        items.forEach(it => {
+            const p = classifyCeremonyPlace(it);
+            placeCounts[p] = (placeCounts[p] || 0) + 1;
+        });
+        const placeEntries = Object.entries(placeCounts).sort((a, b) => b[1] - a[1]);
+
+        activeCharts['chartCeremonyPlaces'] = new Chart(ctx9, {
+            type: 'doughnut',
+            data: {
+                labels: placeEntries.map(e => e[0]),
+                datasets: [
+                    {
+                        data: placeEntries.map(e => e[1]),
+                        backgroundColor: [
+                            '#f59e0b',
+                            '#60a5fa',
+                            '#f472b6',
+                            '#34d399',
+                            '#a78bfa',
+                            '#94a3b8'
+                        ],
+                        borderColor: '#161a24',
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { position: 'right' }
+                }
+            }
+        });
+    }
+}
+
+// Přepínače časové osy ve statistice (Po týdnech / Po dnech / Po měsících)
+document.querySelectorAll('.time-granularity-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.time-granularity-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        statsTimeGranularity = btn.getAttribute('data-granularity') || 'week';
+        renderStatisticsView();
+    });
+});
 
 fetchDatabase();

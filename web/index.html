@@ -7,10 +7,11 @@
     <meta name="description" content="Aktuální smuteční vývěska a databáze parte (Loštice, Mohelnice, Moravičany a okolí)">
     <meta name="theme-color" content="#141720">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="styles.css?v=20261103d">
+    <link rel="stylesheet" href="styles.css?v=20261103e">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <header class="app-header">
@@ -35,11 +36,15 @@
             </div>
         </div>
 
-        <!-- Záložky: Aktuální vývěska vs Archiv parte -->
+        <!-- Záložky: Aktuální vývěska | Statistika | Archiv parte -->
         <div class="nav-tabs">
             <button class="nav-tab active" data-tab="active">
                 <span>📋 Aktuální vývěska</span>
                 <span class="tab-badge" id="countActive">0</span>
+            </button>
+            <button class="nav-tab" data-tab="stats">
+                <span>📊 Statistika</span>
+                <span class="tab-badge" id="countStats">Grafy</span>
             </button>
             <button class="nav-tab" data-tab="archive">
                 <span>🗄️ Archiv parte</span>
@@ -121,7 +126,7 @@
     <main class="main-content">
         <div class="table-toolbar">
             <div class="table-title">
-                <h2 id="sectionTitle">Aktuální smuteční oznámení</h2>
+                <h2 id="sectionTitle">Aktuální smuteční oznámení (Vývěska) – aktuální po dobu 1 týdne od úmrtí</h2>
                 <span id="statsBadge" class="stats-counter">0 záznamů</span>
             </div>
             <div class="toolbar-right">
@@ -133,7 +138,7 @@
         </div>
 
         <!-- TABULKA ROZTAŽENÁ NA CELOU ŠÍŘKU -->
-        <div class="table-container">
+        <div class="table-container" id="tableContainer">
             <table class="data-table" id="obituaryTable">
                 <thead>
                     <tr>
@@ -158,6 +163,161 @@
             <p class="empty-title">Nenalezeny žádné záznamy</p>
             <p class="empty-desc">Zkuste upravit nastavené filtry nebo přepnout na záložku Archiv parte.</p>
         </div>
+
+        <!-- SEKCE STATISTIKA A GRAFY V ČASE -->
+        <section id="statsView" class="stats-dashboard" style="display: none;">
+            <div class="stats-controls-bar">
+                <div class="stats-scope-info" id="statsScopeInfo">
+                    Zobrazena souhrnná statistika ze všech smutečních oznámení (respektuje aktivní filtry nahoře).
+                </div>
+                <div class="stats-time-toggle" role="group" aria-label="Časové seskupení grafů">
+                    <span class="toggle-label">Časová osa grafů:</span>
+                    <button type="button" class="time-granularity-btn active" data-granularity="week">Po týdnech</button>
+                    <button type="button" class="time-granularity-btn" data-granularity="day">Po dnech</button>
+                    <button type="button" class="time-granularity-btn" data-granularity="month">Po měsících</button>
+                </div>
+            </div>
+
+            <!-- KPI Souhrnné karty -->
+            <div class="stats-kpi-grid" id="statsKpiGrid"></div>
+
+            <!-- Hlavní grafy v čase -->
+            <div class="stats-charts-grid">
+                <div class="chart-card chart-card-wide">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3>📈 Vývoj počtu úmrtí v čase (♀ Ženy vs. ♂ Muži + kumulativní trend)</h3>
+                            <p class="chart-subtitle">Počet zesnulých v jednotlivých obdobích rozdělený podle pohlaví a celkový vývoj v čase</p>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap chart-tall">
+                        <canvas id="chartDeathsOverTime"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card chart-card-wide">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3>⏳ Vývoj průměrného věku dožití v čase (♀ Ženy vs. ♂ Muži vs. Celkem)</h3>
+                            <p class="chart-subtitle">Jak se v čase měnil průměrný věk úmrtí žen, mužů a všech zesnulých</p>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap chart-tall">
+                        <canvas id="chartAgeOverTime"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card chart-card-wide">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3>🎯 Jednotlivá úmrtí v čase: Pohlaví vs. Věk při úmrtí (Bodový graf v čase)</h3>
+                            <p class="chart-subtitle">Každý bod představuje konkrétní osobu na časové ose úmrtí (najeďte myší na bod pro detail osoby)</p>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap chart-tall">
+                        <canvas id="chartScatterTimeAge"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3>♀♂ Pohlaví vs. Věk úmrtí (Věkové skupiny)</h3>
+                            <p class="chart-subtitle">Rozložení věku dožití u žen a mužů po jednotlivých dekádách</p>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chartGenderAgeBuckets"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3>📍 Města a obce: Počet úmrtí a průměrný věk dožití</h3>
+                            <p class="chart-subtitle">Počet zesnulých (♀/♂) v jednotlivých obcích a průměrný věk dožití v dané obci</p>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chartTownsStats"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3>💔 Okolnosti a důvody úmrtí vs. Průměrný věk</h3>
+                            <p class="chart-subtitle">Četnost uváděných příčin na parte a průměrný věk zesnulých u dané okolnosti</p>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chartCausesStats"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3>📅 Úmrtí podle dne v týdnu (Pondělí – Neděle)</h3>
+                            <p class="chart-subtitle">Ve které dny v týdnu dochází k úmrtím nejčastěji (rozděleno na ♀ Ženy a ♂ Muže)</p>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chartDayOfWeek"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3>🕊️ Odstup pohřbu od úmrtí (počet dní) a typ obřadu</h3>
+                            <p class="chart-subtitle">Za kolik dní po úmrtí se koná poslední rozloučení</p>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chartFuneralDelay"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <div>
+                            <h3>🏛️ Místa posledního rozloučení a zdroje parte</h3>
+                            <p class="chart-subtitle">Rozdělení podle obřadní síně / kostela / tichého rozloučení bez obřadu</p>
+                        </div>
+                    </div>
+                    <div class="chart-canvas-wrap">
+                        <canvas id="chartCeremonyPlaces"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Podrobná statistická tabulka podle měst a obcí -->
+            <div class="stats-table-card">
+                <div class="chart-card-header">
+                    <div>
+                        <h3>📋 Podrobný statistický přehled podle měst a obcí</h3>
+                        <p class="chart-subtitle">Srovnání počtu zesnulých, poměru žen a mužů, průměrného, nejnižšího a nejvyššího věku v jednotlivých obcích</p>
+                    </div>
+                </div>
+                <div class="table-container stats-subtable-wrap">
+                    <table class="data-table stats-town-table">
+                        <thead>
+                            <tr>
+                                <th>Město / Obec</th>
+                                <th>Celkem úmrtí</th>
+                                <th>♀ Ženy (prům. věk)</th>
+                                <th>♂ Muži (prům. věk)</th>
+                                <th>Průměrný věk celkem</th>
+                                <th>Medián věku</th>
+                                <th>Věkové rozpětí (min – max)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statsTownTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     </main>
 
     <!-- Modal dialog s velkým náhledem parte po kliknutí na Detail -->
@@ -199,6 +359,6 @@
         </p>
     </footer>
 
-    <script src="app.js?v=20261103d"></script>
+    <script src="app.js?v=20261103e"></script>
 </body>
 </html>

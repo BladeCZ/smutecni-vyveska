@@ -1089,6 +1089,27 @@ def run_scraper(enrich_existing_only=False):
 
     existing_records = deduplicate_records(existing_records)
 
+    # Aplikace pravidla archivace: aktuální 1 týden (7 dní) od data úmrtí,
+    # bez ohledu na to, zda je či není jako aktuální na některém ze zdrojových webů.
+    today_date = datetime.now().date()
+    for r in existing_records.values():
+        ref_iso = (r.get("death_date_iso") or "").strip()
+        if not ref_iso:
+            first_seen = (r.get("first_seen") or "").strip()
+            if len(first_seen) >= 10:
+                ref_iso = first_seen[:10]
+        is_recent = False
+        if ref_iso:
+            try:
+                d = datetime.strptime(ref_iso[:10], "%Y-%m-%d").date()
+                is_recent = (today_date - d).days <= 7
+            except Exception:
+                is_recent = bool(r.get("is_active"))
+        else:
+            is_recent = bool(r.get("is_active"))
+        r["is_active"] = bool(is_recent)
+        r["is_archived"] = not bool(is_recent)
+
     save_databases(existing_records)
     print(f"\nHotovo! Všechny záznamy ({len(existing_records)}) byly aktualizovány a uloženy.")
 
