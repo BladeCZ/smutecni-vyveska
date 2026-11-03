@@ -156,11 +156,37 @@ def parse_parte_text(text, category=""):
 
     return info
 
+import shutil
+import time
+import urllib.parse
+
 def fetch_html(url):
     print(f"Stahuji HTML: {url}")
-    resp = requests.get(url, headers=HEADERS, timeout=20)
-    resp.encoding = 'utf-8'
-    return resp.text
+    last_err = None
+    for attempt in range(1, 3):
+        try:
+            resp = requests.get(url, headers=HEADERS, timeout=15)
+            if resp.status_code == 200 and len(resp.text) > 500:
+                resp.encoding = 'utf-8'
+                return resp.text
+            last_err = RuntimeError(f"HTTP {resp.status_code}")
+        except Exception as e:
+            last_err = e
+            print(f"  Pokus {attempt} selhal ({e})...")
+            time.sleep(2)
+
+    # Fallback přes proxy pro případ GeoIP blokace zahraničních IP adres (např. GitHub Actions)
+    proxy_url = f"https://api.allorigins.win/raw?url={urllib.parse.quote(url, safe='')}"
+    try:
+        print(f"  Zkouším záložní proxy pro stažení HTML...")
+        resp = requests.get(proxy_url, headers=HEADERS, timeout=20)
+        if resp.status_code == 200 and len(resp.text) > 500:
+            resp.encoding = 'utf-8'
+            return resp.text
+    except Exception as e:
+        print(f"  Záložní proxy selhala: {e}")
+
+    raise last_err or RuntimeError(f"Nepodařilo se stáhnout {url}")
 
 def parse_items_from_html(html, source_type):
     pattern = r'<a[^>]+href=[\'"]([^\'"]+)[\'"][^>]*title=[\'"]([^\'"]+)[\'"]'
@@ -192,17 +218,25 @@ def parse_items_from_html(html, source_type):
     return items
 
 def download_image(url, target_path):
+    os.makedirs(WEB_IMAGES_DIR, exist_ok=True)
+    web_target = os.path.join(WEB_IMAGES_DIR, os.path.basename(target_path))
     if os.path.exists(target_path) and os.path.getsize(target_path) > 0:
+        if not os.path.exists(web_target):
+            shutil.copy2(target_path, web_target)
         return False
     print(f"  Stahuji nový obrázek: {os.path.basename(target_path)}")
-    resp = requests.get(url, headers=HEADERS, timeout=30)
-    if resp.status_code == 200:
-        with open(target_path, 'wb') as f:
-            f.write(resp.content)
-        return True
-    else:
-        print(f"  Chyba při stahování {url}: HTTP {resp.status_code}")
-        return False
+    for attempt_url in [url, f"https://api.allorigins.win/raw?url={urllib.parse.quote(url, safe='')}"]:
+        try:
+            resp = requests.get(attempt_url, headers=HEADERS, timeout=25)
+            if resp.status_code == 200 and len(resp.content) > 1000:
+                with open(target_path, 'wb') as f:
+                    f.write(resp.content)
+                shutil.copy2(target_path, web_target)
+                return True
+        except Exception as e:
+            print(f"  Pokus o stažení obrázku selhal ({e})...")
+    print(f"  Chyba při stahování {url}")
+    return False
 
 def save_databases(records):
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -315,9 +349,6 @@ def run_scraper(enrich_existing_only=False):
     now_iso = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if not enrich_existing_only:
-        for r in existing_records.values():
-            r["is_active"] = False
-
         try:
             vyveska_html = fetch_html(URL_VYVESKA)
             vyveska_items = parse_items_from_html(vyveska_html, "vyveska")
@@ -333,6 +364,20 @@ def run_scraper(enrich_existing_only=False):
         except Exception as e:
             print(f"Chyba při stahování archivu: {e}")
             archiv_items = []
+
+        if not vyveska_items and not archiv_items and existing_records:
+            print("Varování: Zdrojový web je momentálně nedostupný nebo vrátil 0 položek. Ponechávám stávající databázi beze změny.")
+            return
+
+        # Aktualizovat příznaky is_active pouze pokud se podařilo stáhnout aktuální vývěsku
+        if vyveska_items:
+            active_ids = {item["id"] for item in vyveska_items}
+            for r in existing_records.values():
+                if r["id"] in active_ids:
+                    r["is_active"] = True
+                else:
+                    r["is_active"] = False
+                    r["is_archived"] = True
 
         all_found = []
         for item in vyveska_items:
@@ -373,13 +418,21 @@ def run_scraper(enrich_existing_only=False):
                 }
             else:
                 existing = existing_records[item_id]
-                if item["is_active"]: existing["is_active"] = True
-                if item["is_archived"]: existing["is_archived"] = True
+                if item["is_active"]:
+                    existing["is_active"] = True
+                    existing["is_archived"] = False
+                if item["is_archived"]:
+                    existing["is_archived"] = True
                 existing["last_seen"] = now_iso
                 existing["local_image_path"] = rel_img_path
 
-    # OCR obohacení pro všechny položky, kterým chybí detaily
-    print(f"\nSpouštím OCR rozpoznávání textu a údajů...")
+    # Zajistit, aby žádná neaktivní položka nezůstala mimo archiv
+    for r in existing_records.values():
+        if not r.get("is_active") and not r.get("is_archived"):
+            r["is_archived"] = True
+
+    # OCR obohacení pro položky, kterým chybí detaily (nebo při explicitním přepočtu)
+    print(f"\nKontroluji OCR rozpoznávání textu a údajů...")
     enriched_count = 0
     for item_id, item in existing_records.items():
         item.setdefault("death_cause", "")
@@ -388,6 +441,8 @@ def run_scraper(enrich_existing_only=False):
         item.setdefault("death_date", "")
         item.setdefault("ceremony", "")
         item.setdefault("raw_text", "")
+        if item.get("raw_text") and not enrich_existing_only:
+            continue
         fname = item.get("filename") or os.path.basename(item.get("local_image_path", "")) or f"{item_id}.jpg"
         img_path = os.path.join(IMAGES_DIR, fname)
         if os.path.exists(img_path):
@@ -401,7 +456,7 @@ def run_scraper(enrich_existing_only=False):
                 if parsed["death_cause"]: item["death_cause"] = parsed["death_cause"]
                 if parsed["ceremony"]: item["ceremony"] = parsed["ceremony"]
                 enriched_count += 1
-                print(f"  [{enriched_count}/{len(existing_records)}] {item['name']}: {item['residence']}, {item['age']}, {item['death_cause']}")
+                print(f"  [{enriched_count}] {item['name']}: {item['residence']}, {item['age']}, {item['death_cause']}")
 
     save_databases(existing_records)
     print(f"\nHotovo! Všechny záznamy ({len(existing_records)}) byly aktualizovány a uloženy.")
