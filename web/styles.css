@@ -121,6 +121,32 @@ body {
     border-color: var(--gold);
 }
 
+.notify-btn {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 0.45rem 0.85rem;
+    border-radius: var(--radius);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.825rem;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.notify-btn:hover {
+    color: var(--text-main);
+    border-color: var(--gold);
+}
+
+.notify-btn.active {
+    background: var(--gold-bg);
+    color: var(--gold-light);
+    border-color: var(--gold);
+}
+
 /* Záložky */
 .nav-tabs {
     max-width: 1400px;

@@ -73,7 +73,7 @@ fun HomeScreen(
                         Text("✝", color = AccentGold, fontSize = 24.sp, modifier = Modifier.padding(end = 8.dp))
                         Column {
                             Text("Smuteční vývěska", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                            Text("PS Horníček • Aktuální přehled", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                            Text("Moravičany • Litovel • Zábřeh (1 týden od úmrtí)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                         }
                     }
                 },
@@ -258,7 +258,7 @@ fun ObituaryTableCard(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = obituary.name,
+                        text = obituary.getDisplayNameWithAge(),
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp,
                         color = MaterialTheme.colorScheme.onSurface
@@ -266,9 +266,16 @@ fun ObituaryTableCard(
                     // MĚSTO / BYDLIŠTĚ PŘÍMO POD JMÉNEM
                     if (!obituary.residence.isNullOrBlank()) {
                         Text(
-                            text = "📍 ${obituary.residence}",
-                            fontSize = 14.sp,
+                            text = "📍 ${obituary.residence}" + (if (!obituary.sourceName.isNullOrBlank()) " • ${obituary.sourceName}" else ""),
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
+                            color = AccentGold,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    } else if (!obituary.sourceName.isNullOrBlank()) {
+                        Text(
+                            text = obituary.sourceName,
+                            fontSize = 12.sp,
                             color = AccentGold,
                             modifier = Modifier.padding(top = 2.dp)
                         )

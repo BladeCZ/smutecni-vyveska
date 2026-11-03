@@ -1,10 +1,15 @@
 package cz.pshornicek.vyveska
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import cz.pshornicek.vyveska.data.ObituaryRepository
 import cz.pshornicek.vyveska.model.Obituary
@@ -17,11 +22,16 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var repository: ObituaryRepository
 
+    private val requestNotificationPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
         repository = ObituaryRepository(this)
+        askNotificationPermissionIfNeeded()
 
         setContent {
             SmutecniVyveskaTheme {
@@ -47,7 +57,7 @@ class MainActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(Unit) {
-                    loadData(forceRefresh = false)
+                    loadData(forceRefresh = true)
                 }
 
                 if (selectedObituary != null) {
@@ -71,6 +81,14 @@ class MainActivity : ComponentActivity() {
                         }
                     )
                 }
+            }
+        }
+    }
+
+    private fun askNotificationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
             }
         }
     }

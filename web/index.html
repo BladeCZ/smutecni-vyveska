@@ -7,7 +7,7 @@
     <meta name="description" content="Aktuální smuteční vývěska a databáze parte (Loštice, Mohelnice, Moravičany a okolí)">
     <meta name="theme-color" content="#141720">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="styles.css?v=20261103e">
+    <link rel="stylesheet" href="styles.css?v=20261103f">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -27,6 +27,10 @@
                 <div id="lastUpdated" class="last-updated-pill">
                     <span>🕒 Načítám datum...</span>
                 </div>
+                <button id="notifyBtn" class="notify-btn" title="Zapnout/vypnout upozornění prohlížeče na nová parte">
+                    <span id="notifyBtnIcon">🔔</span>
+                    <span id="notifyBtnLabel">Upozornění</span>
+                </button>
                 <button id="refreshBtn" class="refresh-btn" title="Aktualizovat data">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/>
@@ -355,10 +359,11 @@
         <p>Zdroje dat:
             <a href="https://www.pshornicek.cz/c-m-s-page/smutecni-vyveska" target="_blank" rel="noopener">Horníček Moravičany</a> •
             <a href="https://www.hrandop.cz/smutecni-oznameni" target="_blank" rel="noopener">Hrandop Litovel</a> •
-            <a href="https://www.pohrebnictvi-drozd.cz/vyveska.php" target="_blank" rel="noopener">Drozd Zábřeh</a>
+            <a href="https://www.pohrebnictvi-drozd.cz/vyveska.php" target="_blank" rel="noopener">Drozd Zábřeh</a> •
+            <a href="https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/SmutecniVyveska.apk" target="_blank" rel="noopener">📱 Stáhnout Android aplikaci (APK)</a>
         </p>
     </footer>
 
-    <script src="app.js?v=20261103e"></script>
+    <script src="app.js?v=20261103f"></script>
 </body>
 </html>

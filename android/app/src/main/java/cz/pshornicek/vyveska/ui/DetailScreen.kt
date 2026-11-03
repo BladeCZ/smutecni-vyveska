@@ -87,7 +87,7 @@ fun DetailScreen(
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
-                    model = obituary.imageUrl,
+                    model = obituary.getBestImageUrl(),
                     contentDescription = obituary.name,
                     contentScale = ContentScale.Fit,
                     modifier = Modifier

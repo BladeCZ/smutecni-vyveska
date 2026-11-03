@@ -401,6 +401,7 @@ async function fetchDatabase() {
         updateCounts();
         updateLastSeen(allItems);
         renderTable();
+        checkNewObituariesAndNotify(allItems);
     } else {
         statsBadge.textContent = 'Chyba při načítání databáze';
     }
@@ -1819,4 +1820,121 @@ document.querySelectorAll('.time-granularity-btn').forEach(btn => {
     });
 });
 
+// ==================== OZNÁMENÍ V PROHLÍŽEČI (NOTIFIKACE NA NOVÁ PARTE) ====================
+const NOTIFY_ENABLED_KEY = 'vyveska_notify_enabled';
+const NOTIFY_KNOWN_IDS_KEY = 'vyveska_known_ids';
+const notifyBtn = document.getElementById('notifyBtn');
+const notifyBtnIcon = document.getElementById('notifyBtnIcon');
+const notifyBtnLabel = document.getElementById('notifyBtnLabel');
+
+function isBrowserNotifyEnabled() {
+    return (
+        'Notification' in window &&
+        Notification.permission === 'granted' &&
+        localStorage.getItem(NOTIFY_ENABLED_KEY) === '1'
+    );
+}
+
+function updateNotifyButtonUi() {
+    if (!notifyBtn) return;
+    if (!('Notification' in window)) {
+        notifyBtn.style.display = 'none';
+        return;
+    }
+    const enabled = isBrowserNotifyEnabled();
+    notifyBtn.classList.toggle('active', enabled);
+    if (notifyBtnIcon) notifyBtnIcon.textContent = enabled ? '🔔' : '🔕';
+    if (notifyBtnLabel) notifyBtnLabel.textContent = enabled ? 'Upozornění zapnuto' : 'Upozornění';
+}
+
+function showObituaryNotification(item) {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const gInfo = formatGenderSymbol(item.gender);
+    const agePart = item.age ? ` (${item.age})` : '';
+    const title = `✝ Nové parte: ${gInfo.symbol ? gInfo.symbol + ' ' : ''}${item.name}${agePart}`;
+    const bodyParts = [];
+    if (item.residence) bodyParts.push(`📍 ${item.residence}`);
+    if (item.death_date) bodyParts.push(`Úmrtí: ${item.death_date}`);
+    if (item.source_name) bodyParts.push(item.source_name);
+
+    try {
+        const notif = new Notification(title, {
+            body: bodyParts.join(' • '),
+            icon: item.face_image_path || item.release_face_url || 'favicon.svg',
+            tag: 'parte-' + item.id
+        });
+        notif.onclick = () => {
+            window.focus();
+            const imgSrc = item.local_image_path || item.release_image_url || item.image_url;
+            openModal(item, imgSrc);
+            notif.close();
+        };
+    } catch (e) {}
+}
+
+function checkNewObituariesAndNotify(items) {
+    updateNotifyButtonUi();
+    if (!items || items.length === 0) return;
+
+    const currentIds = items.map(i => i.id);
+    let savedIds = null;
+    try {
+        const raw = localStorage.getItem(NOTIFY_KNOWN_IDS_KEY);
+        if (raw) savedIds = new Set(JSON.parse(raw));
+    } catch (e) {}
+
+    if (savedIds && savedIds.size > 0 && isBrowserNotifyEnabled()) {
+        const newActiveItems = items.filter(i => i.is_active && !savedIds.has(i.id));
+        newActiveItems.slice(0, 3).forEach(item => {
+            showObituaryNotification(item);
+        });
+    }
+
+    try {
+        localStorage.setItem(NOTIFY_KNOWN_IDS_KEY, JSON.stringify(currentIds));
+    } catch (e) {}
+}
+
+if (notifyBtn) {
+    notifyBtn.addEventListener('click', async () => {
+        if (!('Notification' in window)) {
+            alert('Váš prohlížeč nepodporuje webová oznámení.');
+            return;
+        }
+
+        if (isBrowserNotifyEnabled()) {
+            localStorage.setItem(NOTIFY_ENABLED_KEY, '0');
+            updateNotifyButtonUi();
+            return;
+        }
+
+        let perm = Notification.permission;
+        if (perm !== 'granted') {
+            perm = await Notification.requestPermission();
+        }
+
+        if (perm === 'granted') {
+            localStorage.setItem(NOTIFY_ENABLED_KEY, '1');
+            if (allItems.length > 0) {
+                localStorage.setItem(NOTIFY_KNOWN_IDS_KEY, JSON.stringify(allItems.map(i => i.id)));
+            }
+            updateNotifyButtonUi();
+            try {
+                new Notification('🔔 Upozornění na nová parte zapnuta', {
+                    body: 'Jakmile přibude nové smuteční oznámení, prohlížeč vám zobrazí upozornění.',
+                    icon: 'favicon.svg'
+                });
+            } catch (e) {}
+        } else {
+            alert('Oznámení jsou v prohlížeči zablokována. Povolte je prosím u ikony zámku v adresním řádku.');
+        }
+    });
+}
+
+// Automatická kontrola nových parte na pozadí každých 15 minut
+setInterval(() => {
+    fetchDatabase();
+}, 15 * 60 * 1000);
+
+updateNotifyButtonUi();
 fetchDatabase();

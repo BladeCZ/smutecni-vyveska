@@ -7,6 +7,9 @@ on:
       - '.github/workflows/build_apk.yml'
   workflow_dispatch: # Možnost spustit ručně tlačítkem "Run workflow"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Android APK
@@ -20,29 +23,41 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
-          cache: 'gradle'
 
-      - name: Nastavení Android SDK
+      - name: Nastavení Android SDK (bez zastaralého balíčku tools)
         uses: android-actions/setup-android@v3
+        with:
+          packages: 'cmdline-tools;latest platform-tools'
 
-      - name: Oprávnění pro gradlew
+      - name: Nastavení Gradle 8.10.2
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+
+      - name: Sestavení APK (Release a Debug)
+        working-directory: android
         run: |
-          cd android
-          if [ ! -f "gradlew" ]; then
-            gradle wrapper
-          fi
-          chmod +x gradlew
+          gradle assembleRelease --stacktrace || gradle assembleDebug --stacktrace
+          mkdir -p dist
+          cp app/build/outputs/apk/release/*.apk dist/SmutecniVyveska.apk 2>/dev/null || cp app/build/outputs/apk/debug/*.apk dist/SmutecniVyveska.apk
 
-      - name: Sestavení APK (Release/Debug)
-        run: |
-          cd android
-          ./gradlew assembleRelease --stacktrace || ./gradlew assembleDebug --stacktrace
-
-      - name: Uložení APK jako artefakt
+      - name: Uložení APK jako artefakt v GitHub Actions
         uses: actions/upload-artifact@v4
         with:
           name: SmutecniVyveska-APK
           path: |
+            android/dist/SmutecniVyveska.apk
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/apk/debug/*.apk
-          retention-days: 30
+          retention-days: 90
+
+      - name: Nahrání APK do GitHub Releases pro přímé stažení
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if ! gh release view parte-images >/dev/null 2>&1; then
+            gh release create parte-images --title "Úložiště fotek parte a Android aplikace" --notes "Automaticky aktualizované úložiště fotek a APK."
+          fi
+          if [ -f "android/dist/SmutecniVyveska.apk" ]; then
+            gh release upload parte-images android/dist/SmutecniVyveska.apk --clobber
+          fi
