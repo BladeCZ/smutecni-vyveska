@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smuteční vývěska | PS Horníček</title>
-    <meta name="description" content="Aktuální smuteční vývěska a parte pohřební služby Horníček (Moravičany, Mohelnice a okolí)">
+    <title>Smuteční vývěska | Přehled parte a pohřbů</title>
+    <meta name="description" content="Aktuální smuteční vývěska a databáze parte (Loštice, Mohelnice, Moravičany a okolí)">
     <meta name="theme-color" content="#141720">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <!-- Version query string pro okamžité přepsání cache prohlížeče -->
-    <link rel="stylesheet" href="styles.css?v=20261102c">
+    <link rel="stylesheet" href="styles.css?v=20261103b">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -19,8 +18,8 @@
             <div class="header-brand">
                 <span class="cross-icon">✝</span>
                 <div>
-                    <h1>Smuteční vývěska PS Horníček</h1>
-                    <p class="subtitle">Moravičany • Mohelnice • Loštice a okolí</p>
+                    <h1>Smuteční vývěska</h1>
+                    <p class="subtitle">Loštice • Mohelnice • Moravičany a okolí</p>
                 </div>
             </div>
             <div class="header-actions">
@@ -48,12 +47,65 @@
             </button>
         </div>
 
-        <!-- Vyhledávání -->
-        <div class="search-bar-wrap">
+        <!-- Vyhledávání a filtry -->
+        <div class="filters-bar-wrap">
             <div class="search-box">
                 <span class="search-icon">🔍</span>
-                <input type="search" id="searchInput" placeholder="Rychlé vyhledávání (jméno, město, rok, věk...)" autocomplete="off">
-                <button id="clearSearch" class="clear-btn">&times;</button>
+                <input type="search" id="searchInput" placeholder="Hledat jméno, příjmení, město, datum (např. 10. 2026)..." autocomplete="off">
+                <button id="clearSearch" class="clear-btn" title="Vymazat hledání">&times;</button>
+            </div>
+
+            <div class="filters-row">
+                <!-- Filtr: Pohlaví -->
+                <div class="filter-group">
+                    <label for="filterGender">Pohlaví:</label>
+                    <select id="filterGender" class="filter-select">
+                        <option value="all">Vše (♀/♂)</option>
+                        <option value="F">♀ Žena</option>
+                        <option value="M">♂ Muž</option>
+                    </select>
+                </div>
+
+                <!-- Filtr: Město / Adresa -->
+                <div class="filter-group">
+                    <label for="filterTown">Město / Oblast:</label>
+                    <select id="filterTown" class="filter-select">
+                        <option value="all">Všechna města</option>
+                        <option value="__gps__">📍 Moje poloha (GPS)</option>
+                    </select>
+                </div>
+
+                <!-- Filtr: Okolí v km -->
+                <div class="filter-group" id="radiusGroup">
+                    <label for="filterRadius">Okolí:</label>
+                    <select id="filterRadius" class="filter-select" disabled>
+                        <option value="0">Pouze vybrané město</option>
+                        <option value="5">+ okolí do 5 km</option>
+                        <option value="10">+ okolí do 10 km</option>
+                        <option value="15">+ okolí do 15 km</option>
+                        <option value="20" selected>+ okolí do 20 km</option>
+                        <option value="30">+ okolí do 30 km</option>
+                        <option value="50">+ okolí do 50 km</option>
+                    </select>
+                </div>
+
+                <!-- Filtr: Zdroj parte -->
+                <div class="filter-group">
+                    <label for="filterSource">Zdroj parte:</label>
+                    <select id="filterSource" class="filter-select">
+                        <option value="all">Všechny zdroje</option>
+                    </select>
+                </div>
+
+                <!-- Přepínač: Skrýt vzpomínky -->
+                <label class="filter-checkbox-label" id="memoriesToggleWrap" title="Skrýt výroční vzpomínky a zobrazit pouze smuteční oznámení">
+                    <input type="checkbox" id="hideMemoriesToggle">
+                    <span>Skrýt vzpomínky</span>
+                </label>
+
+                <button id="resetFiltersBtn" class="btn-reset-filters" style="display: none;">
+                    ✕ Zrušit filtry
+                </button>
             </div>
         </div>
     </header>
@@ -65,21 +117,24 @@
                 <span id="statsBadge" class="stats-counter">0 záznamů</span>
             </div>
             <div class="toolbar-right">
-                <span id="lastUpdatedInline" class="last-updated-text"></span>
+                <span id="activeFilterSummary" class="filter-summary-text"></span>
                 <a href="data/database.csv" download="smutecni_vyveska.csv" class="btn-csv" title="Stáhnout tabulku do Excelu">
                     <span>📥 Export do Excelu (CSV)</span>
                 </a>
             </div>
         </div>
 
-        <!-- TABULKA ROZTAŽENÁ NA CELOU ŠÍŘKU, BEZ DUPLICITNÍHO SLOUPCE MĚSTO -->
+        <!-- TABULKA ROZTAŽENÁ NA CELOU ŠÍŘKU -->
         <div class="table-container">
             <table class="data-table" id="obituaryTable">
                 <thead>
                     <tr>
-                        <th class="col-name">Jméno a Příjmení</th>
-                        <th class="col-age">Věk</th>
-                        <th class="col-date">Datum úmrtí</th>
+                        <th class="col-name sortable" id="sortByName" title="Seřadit podle jména">
+                            Jméno a Příjmení <span class="sort-indicator" id="sortNameIcon"></span>
+                        </th>
+                        <th class="col-date sortable active-sort" id="sortByDate" title="Seřadit podle data úmrtí">
+                            Datum úmrtí <span class="sort-indicator" id="sortDateIcon">↓</span>
+                        </th>
                         <th class="col-cause">Důvod / Okolnost</th>
                         <th class="col-ceremony">Kdy a kde má pohřeb</th>
                         <th class="col-action">Detail</th>
@@ -93,7 +148,7 @@
 
         <div id="emptyState" class="empty-state" style="display: none;">
             <p class="empty-title">Nenalezeny žádné záznamy</p>
-            <p class="empty-desc">Zkuste upravit vyhledávání nebo přepnout na záložku Archiv parte.</p>
+            <p class="empty-desc">Zkuste upravit nastavené filtry nebo přepnout na záložku Archiv parte.</p>
         </div>
     </main>
 
@@ -129,10 +184,9 @@
     </div>
 
     <footer class="app-footer">
-        <p>Data: <a href="https://www.pshornicek.cz/c-m-s-page/smutecni-vyveska" target="_blank" rel="noopener">Pohřební služba Horníček Miroslav ml.</a> | Hostováno na GitHubu</p>
+        <p>Zdroj dat: <a href="https://www.pshornicek.cz/c-m-s-page/smutecni-vyveska" target="_blank" rel="noopener">Pohřební služba Horníček Miroslav ml.</a> | Hostováno na GitHubu</p>
     </footer>
 
-    <!-- Version query string pro přepsání staré JS cache -->
-    <script src="app.js?v=20261102c"></script>
+    <script src="app.js?v=20261103b"></script>
 </body>
 </html>
