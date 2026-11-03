@@ -1152,3 +1152,321 @@ body {
         grid-column: span 1;
     }
 }
+
+/* ==================== MODAL NASTAVENÍ UPOZORNĚNÍ (NOTIFIKACÍ) ==================== */
+.notify-modal-box {
+    max-width: 540px;
+}
+
+.notify-modal-content {
+    align-items: stretch;
+    gap: 1.1rem;
+}
+
+.notify-master-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    background: rgba(217, 119, 6, 0.1);
+    border: 1px solid rgba(217, 119, 6, 0.35);
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    cursor: pointer;
+}
+
+.notify-master-row input[type="checkbox"] {
+    accent-color: var(--gold);
+    width: 18px;
+    height: 18px;
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+}
+
+.notify-master-row strong {
+    display: block;
+    font-size: 0.95rem;
+    color: var(--text-main);
+    margin-bottom: 0.15rem;
+}
+
+.notify-master-row p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.notify-section {
+    background: #12151d;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 0.9rem 1rem;
+}
+
+.notify-section h3 {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--gold-light);
+    margin-bottom: 0.25rem;
+}
+
+.notify-section-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.65rem;
+}
+
+.notify-checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.notify-check-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.88rem;
+    color: var(--text-main);
+    cursor: pointer;
+}
+
+.notify-check-item input {
+    accent-color: var(--gold);
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.notify-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    padding-top: 0.25rem;
+}
+
+/* Na desktopu je tlačítko pro sbalení mobilního filtru skryté */
+.mobile-filter-toggle-bar {
+    display: none;
+}
+
+/* ==================== OPTIMALIZACE PRO MOBILNÍ TELEFONY (MAX 768px) ==================== */
+/* Desktopové rozvržení (> 768px) zůstává 100% nedotčené */
+@media (max-width: 768px) {
+    .app-header {
+        position: relative;
+        padding: 0.65rem 0.75rem 0.5rem;
+    }
+
+    .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.55rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .header-brand h1 {
+        font-size: 1.12rem;
+    }
+
+    .subtitle {
+        font-size: 0.74rem;
+    }
+
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+    }
+
+    .last-updated-pill {
+        font-size: 0.72rem;
+        padding: 0.3rem 0.55rem;
+        flex: 1 1 auto;
+    }
+
+    .notify-btn,
+    .refresh-btn {
+        padding: 0.35rem 0.65rem;
+        font-size: 0.78rem;
+    }
+
+    .nav-tabs {
+        overflow-x: auto;
+        gap: 0.3rem;
+        padding-bottom: 0.4rem;
+    }
+
+    .nav-tab {
+        padding: 0.4rem 0.65rem;
+        font-size: 0.82rem;
+        white-space: nowrap;
+        flex: 1;
+        justify-content: center;
+    }
+
+    /* Sbalitelný filtr na mobilu – nezabírá půlku obrazovky */
+    .mobile-filter-toggle-bar {
+        display: flex;
+        margin-top: 0.45rem;
+    }
+
+    .mobile-filter-toggle-btn {
+        width: 100%;
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        color: var(--text-main);
+        padding: 0.5rem 0.75rem;
+        border-radius: var(--radius);
+        font-size: 0.84rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        cursor: pointer;
+    }
+
+    .mobile-filter-active-badge {
+        background: var(--gold);
+        color: #fff;
+        font-size: 0.7rem;
+        padding: 0.1rem 0.45rem;
+        border-radius: 999px;
+    }
+
+    .mobile-filter-chevron {
+        font-size: 0.75rem;
+        color: var(--gold-light);
+    }
+
+    .filters-bar-wrap {
+        display: none;
+        margin-top: 0.5rem;
+        padding-top: 0.25rem;
+    }
+
+    .filters-bar-wrap.mobile-open {
+        display: flex;
+    }
+
+    .filters-row {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.45rem;
+    }
+
+    .filter-group {
+        width: 100%;
+        justify-content: space-between;
+        padding: 0.42rem 0.65rem;
+    }
+
+    .filter-select {
+        flex: 1;
+        text-align: right;
+    }
+
+    .town-input-wrap {
+        flex: 1;
+        justify-content: flex-end;
+    }
+
+    .filter-town-input {
+        width: 100%;
+    }
+
+    .town-suggestions-dropdown {
+        left: 0;
+        right: 0;
+        min-width: unset;
+        width: 100%;
+    }
+
+    .filter-checkbox-label,
+    .btn-reset-filters {
+        width: 100%;
+        justify-content: center;
+    }
+
+    /* Hlavní obsah a nadpis na mobilu */
+    .main-content {
+        padding: 0.75rem 0.6rem 2rem;
+    }
+
+    .table-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.45rem;
+        margin-bottom: 0.65rem;
+    }
+
+    .table-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+
+    .table-title h2 {
+        font-size: 1rem;
+        line-height: 1.3;
+    }
+
+    .toolbar-right {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    /* Položky parte na telefonu POD SEBOU (kartové zobrazení místo široké tabulky) */
+    #obituaryTable thead {
+        display: none;
+    }
+
+    #obituaryTable,
+    #obituaryTable tbody,
+    #obituaryTable tr,
+    #obituaryTable td {
+        display: block;
+        width: 100% !important;
+    }
+
+    #obituaryTable tbody tr {
+        padding: 0.85rem 0.9rem;
+        border-bottom: 2px solid var(--border-color);
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+
+    #obituaryTable td {
+        padding: 0 !important;
+        border: none;
+        text-align: left !important;
+        white-space: normal !important;
+        word-break: break-word;
+    }
+
+    #obituaryTable td.cell-empty-mobile {
+        display: none !important;
+    }
+
+    #obituaryTable td[data-label]::before {
+        content: attr(data-label) " ";
+        font-size: 0.74rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: var(--text-dim);
+        display: inline;
+        margin-right: 0.25rem;
+    }
+
+    #obituaryTable td.cell-action {
+        margin-top: 0.35rem;
+    }
+
+    #obituaryTable .btn-open-parte {
+        width: 100%;
+        justify-content: center;
+        padding: 0.55rem 0.85rem;
+    }
+}

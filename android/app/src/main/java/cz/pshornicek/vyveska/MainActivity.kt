@@ -41,6 +41,10 @@ class MainActivity : ComponentActivity() {
                 var selectedObituary by remember { mutableStateOf<Obituary?>(null) }
                 var currentDbUrl by remember { mutableStateOf(repository.getDatabaseUrl()) }
 
+                var notifyEnabled by remember { mutableStateOf(repository.isNotificationsEnabled()) }
+                var notifySources by remember { mutableStateOf(repository.getNotificationSources()) }
+                var notifyIncludeMemories by remember { mutableStateOf(repository.getNotifyIncludeMemories()) }
+
                 fun loadData(forceRefresh: Boolean = false) {
                     isLoading = true
                     errorMessage = null
@@ -71,10 +75,32 @@ class MainActivity : ComponentActivity() {
                         isLoading = isLoading,
                         errorMessage = errorMessage,
                         currentDbUrl = currentDbUrl,
+                        notifyEnabled = notifyEnabled,
+                        notifySources = notifySources,
+                        notifyIncludeMemories = notifyIncludeMemories,
                         onRefresh = { loadData(forceRefresh = true) },
                         onUpdateDbUrl = { newUrl ->
                             repository.setDatabaseUrl(newUrl)
                             currentDbUrl = newUrl
+                            loadData(forceRefresh = true)
+                        },
+                        onSaveNotifySettings = { enabled, sources, includeMemories ->
+                            repository.setNotificationsEnabled(enabled)
+                            repository.setNotificationSources(sources)
+                            repository.setNotifyIncludeMemories(includeMemories)
+                            notifyEnabled = enabled
+                            notifySources = sources
+                            notifyIncludeMemories = includeMemories
+                            if (enabled) {
+                                askNotificationPermissionIfNeeded()
+                            }
+                        },
+                        onTestNotification = {
+                            askNotificationPermissionIfNeeded()
+                            val sample = obituaries.firstOrNull { it.isActive } ?: obituaries.firstOrNull()
+                            if (sample != null) {
+                                repository.sendNotification(sample, 9999)
+                            }
                         },
                         onSelectObituary = { item ->
                             selectedObituary = item

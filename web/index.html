@@ -7,7 +7,7 @@
     <meta name="description" content="Aktuální smuteční vývěska a databáze parte (Loštice, Mohelnice, Moravičany a okolí)">
     <meta name="theme-color" content="#141720">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="styles.css?v=20261103f">
+    <link rel="stylesheet" href="styles.css?v=20261103g">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -56,8 +56,17 @@
             </button>
         </div>
 
+        <!-- Tlačítko pro rozbalení/sbalení filtru (pouze na mobilu) -->
+        <div class="mobile-filter-toggle-bar" id="mobileFilterToggleBar">
+            <button type="button" id="mobileFilterToggleBtn" class="mobile-filter-toggle-btn">
+                <span id="mobileFilterToggleText">🔍 Vyhledávání a filtry</span>
+                <span id="mobileFilterActiveBadge" class="mobile-filter-active-badge" style="display: none;">Aktivní filtr</span>
+                <span id="mobileFilterChevron" class="mobile-filter-chevron">▼ Rozbalit</span>
+            </button>
+        </div>
+
         <!-- Vyhledávání a filtry -->
-        <div class="filters-bar-wrap">
+        <div class="filters-bar-wrap" id="filtersBarWrap">
             <div class="search-box">
                 <span class="search-icon">🔍</span>
                 <input type="search" id="searchInput" placeholder="Hledat jméno, příjmení, město, datum (např. 10. 2026)..." autocomplete="off">
@@ -355,6 +364,71 @@
         </div>
     </div>
 
+    <!-- Modal dialog pro nastavení notifikací (jaká pohřební služba a zda smuteční oznámení nebo i vzpomínky) -->
+    <div id="notifyModal" class="modal" role="dialog" aria-hidden="true">
+        <div class="modal-backdrop" id="notifyModalBackdrop"></div>
+        <div class="modal-box notify-modal-box">
+            <div class="modal-header">
+                <div>
+                    <h2>🔔 Nastavení upozornění (Notifikace)</h2>
+                    <p class="modal-subtitle">Zvolte, na jaká nová parte vás má prohlížeč upozorňovat</p>
+                </div>
+                <button id="notifyModalCloseBtn" class="modal-close" aria-label="Zavřít">&times;</button>
+            </div>
+            <div class="modal-content notify-modal-content">
+                <label class="notify-master-row">
+                    <input type="checkbox" id="notifyMasterCheckbox">
+                    <div>
+                        <strong>Zapnout upozornění v tomto prohlížeči</strong>
+                        <p>Při otevření webu nebo kontrole na pozadí zobrazí systémovou notifikaci na nová parte.</p>
+                    </div>
+                </label>
+
+                <div class="notify-section">
+                    <h3>Pohřební služby (Zdroje parte)</h3>
+                    <p class="notify-section-desc">Vyberte pohřební služby, ze kterých chcete dostávat upozornění:</p>
+                    <div class="notify-checkbox-list">
+                        <label class="notify-check-item">
+                            <input type="checkbox" id="notifySrcHornicek" value="Horníček Moravičany" checked>
+                            <span>Horníček Moravičany</span>
+                        </label>
+                        <label class="notify-check-item">
+                            <input type="checkbox" id="notifySrcHrandop" value="Hrandop Litovel" checked>
+                            <span>Hrandop Litovel</span>
+                        </label>
+                        <label class="notify-check-item">
+                            <input type="checkbox" id="notifySrcDrozd" value="Drozd Zábřeh" checked>
+                            <span>Drozd Zábřeh</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="notify-section">
+                    <h3>Typ oznámení</h3>
+                    <div class="notify-checkbox-list">
+                        <label class="notify-check-item">
+                            <input type="radio" name="notifyCategoryMode" id="notifyOnlyObituaries" value="obituaries_only" checked>
+                            <span>Pouze smuteční oznámení (bez vzpomínek)</span>
+                        </label>
+                        <label class="notify-check-item">
+                            <input type="radio" name="notifyCategoryMode" id="notifyIncludeMemories" value="include_memories">
+                            <span>Smuteční oznámení i výroční vzpomínky</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="notify-modal-actions">
+                    <button type="button" id="notifyTestBtn" class="modal-action-btn">
+                        <span>🔔 Vyzkoušet testovací oznámení</span>
+                    </button>
+                    <button type="button" id="notifySaveBtn" class="btn-open-parte">
+                        <span>💾 Uložit nastavení</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <footer class="app-footer">
         <p>Zdroje dat:
             <a href="https://www.pshornicek.cz/c-m-s-page/smutecni-vyveska" target="_blank" rel="noopener">Horníček Moravičany</a> •
@@ -364,6 +438,6 @@
         </p>
     </footer>
 
-    <script src="app.js?v=20261103f"></script>
+    <script src="app.js?v=20261103g"></script>
 </body>
 </html>

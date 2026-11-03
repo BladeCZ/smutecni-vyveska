@@ -16,6 +16,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.LocalDate
 
 class ObituaryRepository(private val context: Context) {
 
@@ -26,8 +27,17 @@ class ObituaryRepository(private val context: Context) {
         const val PREFS_NAME = "vyveska_prefs"
         const val KEY_DATABASE_URL = "database_url"
         const val KEY_KNOWN_IDS = "known_obituary_ids"
+        const val KEY_NOTIFY_ENABLED = "notify_enabled"
+        const val KEY_NOTIFY_SOURCES = "notify_sources"
+        const val KEY_NOTIFY_MEMORIES = "notify_include_memories"
         const val DEFAULT_FALLBACK_URL = "https://bladecz.github.io/smutecni-vyveska/data/database.json"
         const val CHANNEL_ID = "smutecni_vyveska_notifications"
+
+        val ALL_SOURCES = listOf(
+            "Horníček Moravičany",
+            "Hrandop Litovel",
+            "Drozd Zábřeh"
+        )
     }
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -58,11 +68,61 @@ class ObituaryRepository(private val context: Context) {
         prefs.edit().putString(KEY_DATABASE_URL, url).apply()
     }
 
+    fun isNotificationsEnabled(): Boolean {
+        return prefs.getBoolean(KEY_NOTIFY_ENABLED, true)
+    }
+
+    fun setNotificationsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_NOTIFY_ENABLED, enabled).apply()
+    }
+
+    fun getNotificationSources(): Set<String> {
+        return prefs.getStringSet(KEY_NOTIFY_SOURCES, ALL_SOURCES.toSet()) ?: ALL_SOURCES.toSet()
+    }
+
+    fun setNotificationSources(sources: Set<String>) {
+        prefs.edit().putStringSet(KEY_NOTIFY_SOURCES, sources).apply()
+    }
+
+    fun getNotifyIncludeMemories(): Boolean {
+        return prefs.getBoolean(KEY_NOTIFY_MEMORIES, false)
+    }
+
+    fun setNotifyIncludeMemories(include: Boolean) {
+        prefs.edit().putBoolean(KEY_NOTIFY_MEMORIES, include).apply()
+    }
+
+    private fun normalizeAndSortItems(rawItems: List<Obituary>): List<Obituary> {
+        var refDate = LocalDate.now()
+        rawItems.forEach { it ->
+            val iso = it.deathDateIso?.trim() ?: ""
+            if (iso.length >= 10) {
+                try {
+                    val d = LocalDate.parse(iso.take(10))
+                    if (d.isAfter(refDate)) refDate = d
+                } catch (_: Exception) {
+                }
+            }
+        }
+
+        return rawItems.map { item ->
+            val active = item.isActiveWithinWeek(refDate)
+            item.copy(
+                isActive = active,
+                isArchived = !active,
+                sourceName = if (item.sourceName.isNullOrBlank() || item.sourceName == "PS Horníček") "Horníček Moravičany" else item.sourceName
+            )
+        }.sortedWith(
+            compareByDescending<Obituary> { it.deathDateIso ?: "0000-00-00" }
+                .thenBy { it.name }
+        )
+    }
+
     suspend fun getObituaries(forceRefresh: Boolean = false): Result<List<Obituary>> = withContext(Dispatchers.IO) {
         if (!forceRefresh && cacheFile.exists()) {
             val cached = loadFromCache()
             if (cached != null && cached.isNotEmpty()) {
-                return@withContext Result.success(cached)
+                return@withContext Result.success(normalizeAndSortItems(cached))
             }
         }
 
@@ -73,13 +133,14 @@ class ObituaryRepository(private val context: Context) {
                 connectTimeout = 10000
                 readTimeout = 10000
                 requestMethod = "GET"
-                setRequestProperty("User-Agent", "SmutecniVyveska-Android/1.1")
+                setRequestProperty("User-Agent", "SmutecniVyveska-Android/2.0")
             }
 
             if (connection.responseCode == 200) {
                 val jsonString = connection.inputStream.bufferedReader().use { it.readText() }
                 val type = object : TypeToken<List<Obituary>>() {}.type
-                val items: List<Obituary> = gson.fromJson(jsonString, type)
+                val rawItems: List<Obituary> = gson.fromJson(jsonString, type)
+                val items = normalizeAndSortItems(rawItems)
 
                 checkAndNotifyNewItems(items)
                 cacheFile.writeText(jsonString)
@@ -87,7 +148,7 @@ class ObituaryRepository(private val context: Context) {
             } else {
                 val cached = loadFromCache()
                 if (cached != null) {
-                    Result.success(cached)
+                    Result.success(normalizeAndSortItems(cached))
                 } else {
                     Result.failure(Exception("HTTP ${connection.responseCode}: ${connection.responseMessage}"))
                 }
@@ -95,7 +156,7 @@ class ObituaryRepository(private val context: Context) {
         } catch (e: Exception) {
             val cached = loadFromCache()
             if (cached != null) {
-                Result.success(cached)
+                Result.success(normalizeAndSortItems(cached))
             } else {
                 Result.failure(e)
             }
@@ -106,9 +167,18 @@ class ObituaryRepository(private val context: Context) {
         val knownSet = prefs.getStringSet(KEY_KNOWN_IDS, null)
         val currentIds = items.map { it.id }.toSet()
 
-        if (knownSet != null && knownSet.isNotEmpty()) {
-            val newItems = items.filter { it.isActive && !knownSet.contains(it.id) }
-            newItems.take(3).forEachIndexed { idx, item ->
+        if (knownSet != null && knownSet.isNotEmpty() && isNotificationsEnabled()) {
+            val allowedSources = getNotificationSources()
+            val includeMemories = getNotifyIncludeMemories()
+
+            val newMatchingItems = items.filter { item ->
+                item.isActive &&
+                !knownSet.contains(item.id) &&
+                allowedSources.contains(item.getEffectiveSource()) &&
+                (includeMemories || item.category != "Vzpomínka")
+            }
+
+            newMatchingItems.take(3).forEachIndexed { idx, item ->
                 sendNotification(item, 1000 + idx)
             }
         }
@@ -130,11 +200,12 @@ class ObituaryRepository(private val context: Context) {
 
             val townPart = if (!item.residence.isNullOrBlank()) "📍 ${item.residence} • " else ""
             val datePart = if (!item.deathDate.isNullOrBlank()) "Úmrtí: ${item.deathDate}" else ""
-            val srcPart = if (!item.sourceName.isNullOrBlank()) " (${item.sourceName})" else ""
+            val srcPart = " (${item.getEffectiveSource()})"
+            val prefix = if (item.category == "Vzpomínka") "🕯️ Vzpomínka: " else "✝ Nové parte: "
 
             val notification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
-                .setContentTitle("✝ ${item.getDisplayNameWithAge()}")
+                .setContentTitle("$prefix${item.getDisplayNameWithAge()}")
                 .setContentText("$townPart$datePart$srcPart")
                 .setPriority(NotificationCompat.PRIORITY_DEFAULT)
                 .setContentIntent(pendingIntent)

@@ -551,6 +551,12 @@ function updateFilterUiState() {
     if (hideMemories) parts.push('bez vzpomínek');
 
     activeFilterSummary.textContent = parts.length > 0 ? `Aktivní filtr: ${parts.join(' • ')}` : '';
+
+    const mobileFilterActiveBadge = document.getElementById('mobileFilterActiveBadge');
+    if (mobileFilterActiveBadge) {
+        mobileFilterActiveBadge.style.display = anyFilterActive ? 'inline-block' : 'none';
+        mobileFilterActiveBadge.textContent = parts.length > 0 ? `${parts.length} aktivní` : 'Aktivní';
+    }
 }
 
 // Vykreslení tabulky nebo statistického přehledu
@@ -638,9 +644,9 @@ function renderTable() {
                     </div>
                 </div>
             </td>
-            <td class="cell-date">${escapeHtml(dateText)}</td>
-            <td class="cell-cause">${escapeHtml(causeText)}</td>
-            <td class="cell-ceremony">${escapeHtml(ceremonyText)}</td>
+            <td class="cell-date" data-label="Datum úmrtí:">${escapeHtml(dateText)}</td>
+            <td class="cell-cause${causeText === '–' ? ' cell-empty-mobile' : ''}" data-label="Důvod / Okolnost:">${escapeHtml(causeText)}</td>
+            <td class="cell-ceremony${ceremonyText === '–' ? ' cell-empty-mobile' : ''}" data-label="Pohřeb:">${escapeHtml(ceremonyText)}</td>
             <td class="cell-action">
                 <button class="btn-open-parte" title="Otevřít celé parte">
                     <span>📄 Detail</span>
@@ -1820,19 +1826,63 @@ document.querySelectorAll('.time-granularity-btn').forEach(btn => {
     });
 });
 
-// ==================== OZNÁMENÍ V PROHLÍŽEČI (NOTIFIKACE NA NOVÁ PARTE) ====================
+// ==================== MOBILNÍ SBALITELNÝ FILTR ====================
+const mobileFilterToggleBtn = document.getElementById('mobileFilterToggleBtn');
+const filtersBarWrap = document.getElementById('filtersBarWrap');
+const mobileFilterChevron = document.getElementById('mobileFilterChevron');
+
+if (mobileFilterToggleBtn && filtersBarWrap) {
+    mobileFilterToggleBtn.addEventListener('click', () => {
+        const isOpen = filtersBarWrap.classList.toggle('mobile-open');
+        if (mobileFilterChevron) {
+            mobileFilterChevron.textContent = isOpen ? '▲ Skrýt' : '▼ Rozbalit';
+        }
+    });
+}
+
+// ==================== OZNÁMENÍ V PROHLÍŽEČI (NOTIFIKACE NA NOVÁ PARTE + NASTAVENÍ) ====================
 const NOTIFY_ENABLED_KEY = 'vyveska_notify_enabled';
 const NOTIFY_KNOWN_IDS_KEY = 'vyveska_known_ids';
+const NOTIFY_SOURCES_KEY = 'vyveska_notify_sources';
+const NOTIFY_CATEGORY_KEY = 'vyveska_notify_category_mode';
+
 const notifyBtn = document.getElementById('notifyBtn');
 const notifyBtnIcon = document.getElementById('notifyBtnIcon');
 const notifyBtnLabel = document.getElementById('notifyBtnLabel');
 
-function isBrowserNotifyEnabled() {
-    return (
+const notifyModal = document.getElementById('notifyModal');
+const notifyModalBackdrop = document.getElementById('notifyModalBackdrop');
+const notifyModalCloseBtn = document.getElementById('notifyModalCloseBtn');
+const notifyMasterCheckbox = document.getElementById('notifyMasterCheckbox');
+const notifySrcHornicek = document.getElementById('notifySrcHornicek');
+const notifySrcHrandop = document.getElementById('notifySrcHrandop');
+const notifySrcDrozd = document.getElementById('notifySrcDrozd');
+const notifyOnlyObituaries = document.getElementById('notifyOnlyObituaries');
+const notifyIncludeMemories = document.getElementById('notifyIncludeMemories');
+const notifyTestBtn = document.getElementById('notifyTestBtn');
+const notifySaveBtn = document.getElementById('notifySaveBtn');
+
+function getNotifySettings() {
+    let sources = ['Horníček Moravičany', 'Hrandop Litovel', 'Drozd Zábřeh'];
+    try {
+        const raw = localStorage.getItem(NOTIFY_SOURCES_KEY);
+        if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) sources = parsed;
+        }
+    } catch (e) {}
+
+    const categoryMode = localStorage.getItem(NOTIFY_CATEGORY_KEY) || 'obituaries_only';
+    const enabled = (
         'Notification' in window &&
         Notification.permission === 'granted' &&
         localStorage.getItem(NOTIFY_ENABLED_KEY) === '1'
     );
+    return { enabled, sources, categoryMode };
+}
+
+function isBrowserNotifyEnabled() {
+    return getNotifySettings().enabled;
 }
 
 function updateNotifyButtonUi() {
@@ -1841,17 +1891,35 @@ function updateNotifyButtonUi() {
         notifyBtn.style.display = 'none';
         return;
     }
-    const enabled = isBrowserNotifyEnabled();
+    const { enabled } = getNotifySettings();
     notifyBtn.classList.toggle('active', enabled);
     if (notifyBtnIcon) notifyBtnIcon.textContent = enabled ? '🔔' : '🔕';
     if (notifyBtnLabel) notifyBtnLabel.textContent = enabled ? 'Upozornění zapnuto' : 'Upozornění';
+}
+
+function openNotifyModal() {
+    if (!notifyModal) return;
+    const { enabled, sources, categoryMode } = getNotifySettings();
+    if (notifyMasterCheckbox) notifyMasterCheckbox.checked = enabled;
+    if (notifySrcHornicek) notifySrcHornicek.checked = sources.includes('Horníček Moravičany');
+    if (notifySrcHrandop) notifySrcHrandop.checked = sources.includes('Hrandop Litovel');
+    if (notifySrcDrozd) notifySrcDrozd.checked = sources.includes('Drozd Zábřeh');
+    if (notifyOnlyObituaries) notifyOnlyObituaries.checked = (categoryMode !== 'include_memories');
+    if (notifyIncludeMemories) notifyIncludeMemories.checked = (categoryMode === 'include_memories');
+    notifyModal.classList.add('active');
+}
+
+function closeNotifyModal() {
+    if (!notifyModal) return;
+    notifyModal.classList.remove('active');
 }
 
 function showObituaryNotification(item) {
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     const gInfo = formatGenderSymbol(item.gender);
     const agePart = item.age ? ` (${item.age})` : '';
-    const title = `✝ Nové parte: ${gInfo.symbol ? gInfo.symbol + ' ' : ''}${item.name}${agePart}`;
+    const prefix = item.category === 'Vzpomínka' ? '🕯️ Vzpomínka' : '✝ Nové parte';
+    const title = `${prefix}: ${gInfo.symbol ? gInfo.symbol + ' ' : ''}${item.name}${agePart}`;
     const bodyParts = [];
     if (item.residence) bodyParts.push(`📍 ${item.residence}`);
     if (item.death_date) bodyParts.push(`Úmrtí: ${item.death_date}`);
@@ -1883,9 +1951,16 @@ function checkNewObituariesAndNotify(items) {
         if (raw) savedIds = new Set(JSON.parse(raw));
     } catch (e) {}
 
-    if (savedIds && savedIds.size > 0 && isBrowserNotifyEnabled()) {
-        const newActiveItems = items.filter(i => i.is_active && !savedIds.has(i.id));
-        newActiveItems.slice(0, 3).forEach(item => {
+    const { enabled, sources, categoryMode } = getNotifySettings();
+    if (savedIds && savedIds.size > 0 && enabled) {
+        const newMatchingItems = items.filter(i => {
+            if (!i.is_active || savedIds.has(i.id)) return false;
+            const src = i.source_name || 'Horníček Moravičany';
+            if (!sources.includes(src)) return false;
+            if (categoryMode === 'obituaries_only' && i.category === 'Vzpomínka') return false;
+            return true;
+        });
+        newMatchingItems.slice(0, 3).forEach(item => {
             showObituaryNotification(item);
         });
     }
@@ -1896,37 +1971,76 @@ function checkNewObituariesAndNotify(items) {
 }
 
 if (notifyBtn) {
-    notifyBtn.addEventListener('click', async () => {
+    notifyBtn.addEventListener('click', () => {
+        openNotifyModal();
+    });
+}
+
+if (notifyModalCloseBtn) notifyModalCloseBtn.addEventListener('click', closeNotifyModal);
+if (notifyModalBackdrop) notifyModalBackdrop.addEventListener('click', closeNotifyModal);
+
+if (notifySaveBtn) {
+    notifySaveBtn.addEventListener('click', async () => {
+        const wantEnabled = notifyMasterCheckbox ? notifyMasterCheckbox.checked : false;
+        const selectedSources = [];
+        if (notifySrcHornicek && notifySrcHornicek.checked) selectedSources.push('Horníček Moravičany');
+        if (notifySrcHrandop && notifySrcHrandop.checked) selectedSources.push('Hrandop Litovel');
+        if (notifySrcDrozd && notifySrcDrozd.checked) selectedSources.push('Drozd Zábřeh');
+
+        if (wantEnabled && selectedSources.length === 0) {
+            alert('Vyberte prosím alespoň jednu pohřební službu.');
+            return;
+        }
+
+        const catMode = (notifyIncludeMemories && notifyIncludeMemories.checked) ? 'include_memories' : 'obituaries_only';
+        localStorage.setItem(NOTIFY_SOURCES_KEY, JSON.stringify(selectedSources));
+        localStorage.setItem(NOTIFY_CATEGORY_KEY, catMode);
+
+        if (wantEnabled) {
+            let perm = Notification.permission;
+            if (perm !== 'granted') {
+                perm = await Notification.requestPermission();
+            }
+            if (perm === 'granted') {
+                localStorage.setItem(NOTIFY_ENABLED_KEY, '1');
+                if (allItems.length > 0) {
+                    localStorage.setItem(NOTIFY_KNOWN_IDS_KEY, JSON.stringify(allItems.map(i => i.id)));
+                }
+            } else {
+                localStorage.setItem(NOTIFY_ENABLED_KEY, '0');
+                alert('Oznámení jsou v prohlížeči zablokována. Povolte je prosím u ikony zámku v adresním řádku.');
+            }
+        } else {
+            localStorage.setItem(NOTIFY_ENABLED_KEY, '0');
+        }
+
+        updateNotifyButtonUi();
+        closeNotifyModal();
+    });
+}
+
+if (notifyTestBtn) {
+    notifyTestBtn.addEventListener('click', async () => {
         if (!('Notification' in window)) {
             alert('Váš prohlížeč nepodporuje webová oznámení.');
             return;
         }
-
-        if (isBrowserNotifyEnabled()) {
-            localStorage.setItem(NOTIFY_ENABLED_KEY, '0');
-            updateNotifyButtonUi();
-            return;
-        }
-
         let perm = Notification.permission;
         if (perm !== 'granted') {
             perm = await Notification.requestPermission();
         }
-
-        if (perm === 'granted') {
-            localStorage.setItem(NOTIFY_ENABLED_KEY, '1');
-            if (allItems.length > 0) {
-                localStorage.setItem(NOTIFY_KNOWN_IDS_KEY, JSON.stringify(allItems.map(i => i.id)));
-            }
-            updateNotifyButtonUi();
-            try {
-                new Notification('🔔 Upozornění na nová parte zapnuta', {
-                    body: 'Jakmile přibude nové smuteční oznámení, prohlížeč vám zobrazí upozornění.',
-                    icon: 'favicon.svg'
-                });
-            } catch (e) {}
+        if (perm !== 'granted') {
+            alert('Pro vyzkoušení oznámení je potřeba povolit notifikace v prohlížeči.');
+            return;
+        }
+        const sample = allItems.find(i => i.is_active) || allItems[0];
+        if (sample) {
+            showObituaryNotification(sample);
         } else {
-            alert('Oznámení jsou v prohlížeči zablokována. Povolte je prosím u ikony zámku v adresním řádku.');
+            new Notification('🔔 Testovací oznámení – Smuteční vývěska', {
+                body: 'Notifikace v prohlížeči fungují správně.',
+                icon: 'favicon.svg'
+            });
         }
     });
 }
