@@ -3,14 +3,17 @@ let allItems = [];
 let currentTab = 'active'; // Výchozí záložka: Aktuální vývěska
 let currentSearch = '';
 let filterGender = 'all';
-let filterTown = 'all';
+let filterTown = 'all'; // 'all', '__gps__', nebo název města / vlastní zadání
 let filterRadiusKm = 20;
 let filterSource = 'all';
 let hideMemories = false;
 let sortField = 'date'; // Výchozí řazení: podle data úmrtí
 let sortDesc = true;    // Od nejnovějších (posledních)
 let userGpsCoords = null;
+let customTownCoords = {}; // Cache pro dohledané obce přes Nominatim
 let activeModalItem = null;
+let allKnownTowns = [];
+let geocodeTimeout = null;
 
 // GPS souřadnice měst a obcí v regionu pro výpočet vzdálenosti (např. Loštice a okolí 20 km)
 const TOWN_COORDS = {
@@ -34,18 +37,35 @@ const TOWN_COORDS = {
     "Zvole": [49.8414, 16.9169],
     "Stavenice": [49.7775, 16.9817],
     "Červená Lhota": [49.7136, 17.0156],
+    "Bílá Lhota": [49.7103, 16.9761],
+    "Slavoňov": [49.8017, 16.9061],
+    "Řimice": [49.7186, 17.0144],
+    "Klopina": [49.8225, 17.0308],
+    "Police": [49.8147, 17.0014],
+    "Medlov": [49.7844, 17.0644],
+    "Mladeč": [49.7061, 17.0169],
     "Zábřeh": [49.8825, 16.8722],
     "Litovel": [49.7011, 17.0761],
     "Uničov": [49.7708, 17.1214],
     "Šumperk": [49.9653, 16.9706],
-    "Olomouc": [49.5938, 17.2509]
+    "Olomouc": [49.5938, 17.2509],
+    "Šternberk": [49.7306, 17.2989],
+    "Konice": [49.5892, 16.8886],
+    "Moravská Třebová": [49.7578, 16.6642],
+    "prostějov": [49.4719, 17.1118],
+    "Prostějov": [49.4719, 17.1118],
+    "Lanškroun": [49.9122, 16.6119]
 };
 
 // DOM prvky
 const searchInput = document.getElementById('searchInput');
 const clearSearchBtn = document.getElementById('clearSearch');
 const filterGenderEl = document.getElementById('filterGender');
-const filterTownEl = document.getElementById('filterTown');
+const filterTownInput = document.getElementById('filterTownInput');
+const clearTownBtn = document.getElementById('clearTownBtn');
+const gpsTownBtn = document.getElementById('gpsTownBtn');
+const townSuggestionsEl = document.getElementById('townSuggestions');
+const townComboboxWrap = document.getElementById('townComboboxWrap');
 const filterRadiusEl = document.getElementById('filterRadius');
 const filterSourceEl = document.getElementById('filterSource');
 const hideMemoriesToggle = document.getElementById('hideMemoriesToggle');
@@ -80,6 +100,14 @@ const modalBackdrop = document.getElementById('modalBackdrop');
 const modalShareBtn = document.getElementById('modalShareBtn');
 const modalDownloadLink = document.getElementById('modalDownloadLink');
 
+function normalizeStr(s) {
+    return (s || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim();
+}
+
 // Výpočet vzdušné vzdálenosti dvou GPS bodů (Haversine v km)
 function getDistanceKm(lat1, lon1, lat2, lon2) {
     if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
@@ -104,10 +132,38 @@ function getItemCoords(item) {
     return null;
 }
 
+function findMatchingKnownTown(query) {
+    if (!query || query === 'all' || query === '__gps__') return null;
+    const normQ = normalizeStr(query);
+    if (!normQ) return null;
+
+    // 1. Přesná shoda bez diakritiky
+    for (const town of allKnownTowns) {
+        if (normalizeStr(town) === normQ) return town;
+    }
+    // 2. Začíná na zadaný text (např. "lost" -> "Loštice")
+    for (const town of allKnownTowns) {
+        if (normalizeStr(town).startsWith(normQ)) return town;
+    }
+    return null;
+}
+
 function getFilterCenterCoords() {
-    if (filterTown === 'all') return null;
+    if (filterTown === 'all' || !filterTown) return null;
     if (filterTown === '__gps__') return userGpsCoords;
     if (TOWN_COORDS[filterTown]) return TOWN_COORDS[filterTown];
+    if (customTownCoords[filterTown]) return customTownCoords[filterTown];
+
+    const matchedTown = findMatchingKnownTown(filterTown);
+    if (matchedTown) {
+        if (TOWN_COORDS[matchedTown]) return TOWN_COORDS[matchedTown];
+        for (const it of allItems) {
+            if (it.residence === matchedTown && it.lat != null && it.lon != null) {
+                return [it.lat, it.lon];
+            }
+        }
+    }
+
     for (const it of allItems) {
         if (it.residence === filterTown && it.lat != null && it.lon != null) {
             return [it.lat, it.lon];
@@ -116,32 +172,15 @@ function getFilterCenterCoords() {
     return null;
 }
 
-// Naplnění výběrových seznamů Město a Zdroj parte
+// Naplnění seznamu měst pro našeptávač a seznamu zdrojů
 function populateFilterDropdowns(items) {
-    // 1. Města
-    const currentSelectedTown = filterTownEl.value;
-    const townsSet = new Set(Object.keys(TOWN_COORDS));
+    const townsSet = new Set(Object.keys(TOWN_COORDS).filter(t => t[0] === t[0].toUpperCase()));
     items.forEach(it => {
         if (it.residence) townsSet.add(it.residence);
     });
-    const sortedTowns = Array.from(townsSet).sort((a, b) => a.localeCompare(b, 'cs'));
+    allKnownTowns = Array.from(townsSet).sort((a, b) => a.localeCompare(b, 'cs'));
 
-    filterTownEl.innerHTML = `
-        <option value="all">Všechna města</option>
-        <option value="__gps__">📍 Moje poloha (GPS)</option>
-    `;
-    sortedTowns.forEach(town => {
-        const count = items.filter(i => i.residence === town).length;
-        const opt = document.createElement('option');
-        opt.value = town;
-        opt.textContent = count > 0 ? `${town} (${count})` : town;
-        filterTownEl.appendChild(opt);
-    });
-    if (Array.from(filterTownEl.options).some(o => o.value === currentSelectedTown)) {
-        filterTownEl.value = currentSelectedTown;
-    }
-
-    // 2. Zdroje parte
+    // Zdroje parte
     const currentSelectedSource = filterSourceEl.value;
     const sourcesSet = new Set(['PS Horníček']);
     items.forEach(it => {
@@ -157,6 +196,117 @@ function populateFilterDropdowns(items) {
     if (Array.from(filterSourceEl.options).some(o => o.value === currentSelectedSource)) {
         filterSourceEl.value = currentSelectedSource;
     }
+}
+
+// Vykreslení rozbalovacího našeptávače měst
+function renderTownSuggestions(queryText, extraRemoteItems = []) {
+    const normQ = normalizeStr(queryText);
+    const matchingLocal = allKnownTowns.filter(t => !normQ || normalizeStr(t).includes(normQ));
+
+    let html = '';
+    if (!normQ) {
+        html += `
+            <div class="town-suggestion-item" data-value="all">
+                <span>🌍 Všechna města</span>
+                <span class="town-suggestion-badge">Zrušit filtr</span>
+            </div>
+            <div class="town-suggestion-item" data-value="__gps__">
+                <span>📍 Moje aktuální poloha (GPS)</span>
+                <span class="town-suggestion-badge">GPS</span>
+            </div>
+        `;
+    }
+
+    matchingLocal.slice(0, 18).forEach(town => {
+        const count = allItems.filter(i => i.residence === town).length;
+        html += `
+            <div class="town-suggestion-item" data-value="${escapeHtml(town)}">
+                <span>📍 ${escapeHtml(town)}</span>
+                ${count > 0 ? `<span class="town-suggestion-badge">${count} parte</span>` : `<span class="town-suggestion-badge">mapa</span>`}
+            </div>
+        `;
+    });
+
+    extraRemoteItems.forEach(rem => {
+        if (!matchingLocal.some(t => normalizeStr(t) === normalizeStr(rem.name))) {
+            html += `
+                <div class="town-suggestion-item" data-value="${escapeHtml(rem.name)}" data-lat="${rem.lat}" data-lon="${rem.lon}">
+                    <span>🔎 ${escapeHtml(rem.label)}</span>
+                    <span class="town-suggestion-badge">ČR GPS</span>
+                </div>
+            `;
+        }
+    });
+
+    if (!html) {
+        html = `<div class="town-suggestion-item" style="pointer-events:none;color:var(--text-muted);">Hledám obec „${escapeHtml(queryText)}“...</div>`;
+    }
+
+    townSuggestionsEl.innerHTML = html;
+    townSuggestionsEl.style.display = 'block';
+
+    townSuggestionsEl.querySelectorAll('.town-suggestion-item[data-value]').forEach(el => {
+        el.addEventListener('mousedown', (e) => {
+            e.preventDefault(); // Zabránit blur před kliknutím
+            const val = el.getAttribute('data-value');
+            const lat = el.getAttribute('data-lat');
+            const lon = el.getAttribute('data-lon');
+            if (lat && lon) {
+                customTownCoords[val] = [parseFloat(lat), parseFloat(lon)];
+            }
+            selectTownFilter(val);
+        });
+    });
+}
+
+function selectTownFilter(val) {
+    townSuggestionsEl.style.display = 'none';
+    if (val === 'all' || !val) {
+        filterTown = 'all';
+        filterTownInput.value = '';
+        clearTownBtn.classList.remove('visible');
+        renderTable();
+        return;
+    }
+
+    if (val === '__gps__') {
+        triggerGpsLocation();
+        return;
+    }
+
+    filterTown = val;
+    filterTownInput.value = val;
+    clearTownBtn.classList.add('visible');
+    renderTable();
+}
+
+function triggerGpsLocation() {
+    if (!navigator.geolocation) {
+        alert('Váš prohlížeč nepodporuje zjištění polohy GPS.');
+        return;
+    }
+    filterTownInput.value = '📍 Zjišťuji polohu...';
+    navigator.geolocation.getCurrentPosition(
+        (pos) => {
+            userGpsCoords = [pos.coords.latitude, pos.coords.longitude];
+            filterTown = '__gps__';
+            filterTownInput.value = '📍 Moje poloha (GPS)';
+            clearTownBtn.classList.add('visible');
+            if (filterRadiusKm === 0) {
+                filterRadiusKm = 20;
+                filterRadiusEl.value = '20';
+            }
+            townSuggestionsEl.style.display = 'none';
+            renderTable();
+        },
+        () => {
+            alert('Nepodařilo se získat vaši polohu. Napište prosím město do pole.');
+            filterTown = 'all';
+            filterTownInput.value = '';
+            clearTownBtn.classList.remove('visible');
+            renderTable();
+        }
+    );
 }
 
 // Načtení databáze
@@ -254,14 +404,21 @@ function getFilteredAndSortedItems() {
         }
 
         // 5. Filtr města a vzdálenosti (okolí v km)
-        if (filterTown !== 'all') {
+        if (filterTown !== 'all' && filterTown) {
             if (filterRadiusKm === 0 && filterTown !== '__gps__') {
-                if (item.residence !== filterTown) return false;
+                const normItemTown = normalizeStr(item.residence);
+                const normFilterTown = normalizeStr(filterTown);
+                if (!normItemTown.includes(normFilterTown)) return false;
             } else if (centerCoords) {
                 const itemCoords = getItemCoords(item);
                 if (!itemCoords) return false;
                 const dist = getDistanceKm(centerCoords[0], centerCoords[1], itemCoords[0], itemCoords[1]);
                 if (dist == null || dist > filterRadiusKm) return false;
+            } else {
+                // Pokud uživatel píše město, pro které ještě nejsou souřadnice, filtruj podle názvu obce
+                const normItemTown = normalizeStr(item.residence);
+                const normFilterTown = normalizeStr(filterTown);
+                if (!normItemTown.includes(normFilterTown)) return false;
             }
         }
 
@@ -309,13 +466,14 @@ function updateFilterUiState() {
         currentSearch.length > 0;
 
     resetFiltersBtn.style.display = anyFilterActive ? 'inline-flex' : 'none';
-    filterRadiusEl.disabled = (filterTown === 'all');
+    filterRadiusEl.disabled = (filterTown === 'all' || !filterTown);
 
     const parts = [];
     if (filterGender === 'F') parts.push('♀ Ženy');
     if (filterGender === 'M') parts.push('♂ Muži');
-    if (filterTown !== 'all') {
-        const townLabel = filterTown === '__gps__' ? 'Moje poloha' : filterTown;
+    if (filterTown !== 'all' && filterTown) {
+        const matched = findMatchingKnownTown(filterTown);
+        const townLabel = filterTown === '__gps__' ? 'Moje poloha' : (matched || filterTown);
         parts.push(filterRadiusKm > 0 ? `${townLabel} + okolí ${filterRadiusKm} km` : townLabel);
     }
     if (filterSource !== 'all') parts.push(filterSource);
@@ -460,7 +618,10 @@ modalImg.addEventListener('click', () => {
 modalCloseBtn.addEventListener('click', closeModal);
 modalBackdrop.addEventListener('click', closeModal);
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+        closeModal();
+        townSuggestionsEl.style.display = 'none';
+    }
 });
 
 modalShareBtn.addEventListener('click', async () => {
@@ -497,37 +658,90 @@ filterGenderEl.addEventListener('change', (e) => {
     renderTable();
 });
 
-filterTownEl.addEventListener('change', (e) => {
-    const val = e.target.value;
-    if (val === '__gps__') {
-        if (!navigator.geolocation) {
-            alert('Váš prohlížeč nepodporuje zjištění polohy GPS.');
-            filterTownEl.value = 'all';
-            filterTown = 'all';
-            renderTable();
-            return;
-        }
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                userGpsCoords = [pos.coords.latitude, pos.coords.longitude];
-                filterTown = '__gps__';
-                if (filterRadiusKm === 0) {
-                    filterRadiusKm = 20;
-                    filterRadiusEl.value = '20';
-                }
-                renderTable();
-            },
-            () => {
-                alert('Nepodařilo se získat vaši polohu. Vyberte prosím město ze seznamu.');
-                filterTownEl.value = 'all';
-                filterTown = 'all';
-                renderTable();
-            }
-        );
-    } else {
-        filterTown = val;
+// Našeptávač a psaní do kolonky Město
+filterTownInput.addEventListener('focus', () => {
+    const q = filterTown === '__gps__' ? '' : filterTownInput.value.trim();
+    renderTownSuggestions(q);
+});
+
+filterTownInput.addEventListener('input', (e) => {
+    const val = e.target.value.trim();
+    clearTownBtn.classList.toggle('visible', val.length > 0);
+
+    if (!val) {
+        filterTown = 'all';
+        renderTownSuggestions('');
         renderTable();
+        return;
     }
+
+    filterTown = val;
+    renderTownSuggestions(val);
+    renderTable();
+
+    // Pokud obec není v lokálním seznamu a má aspoň 3 znaky, dohledáme její GPS v ČR přes OpenStreetMap Nominatim
+    if (geocodeTimeout) clearTimeout(geocodeTimeout);
+    if (val.length >= 3 && !findMatchingKnownTown(val)) {
+        geocodeTimeout = setTimeout(async () => {
+            try {
+                const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=cz&limit=4&q=${encodeURIComponent(val)}`;
+                const resp = await fetch(url, { headers: { 'Accept-Language': 'cs' } });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    const remoteItems = data.map(d => {
+                        const shortName = (d.display_name || '').split(',')[0].trim();
+                        return {
+                            name: shortName,
+                            label: (d.display_name || '').split(',').slice(0, 2).join(', '),
+                            lat: parseFloat(d.lat),
+                            lon: parseFloat(d.lon)
+                        };
+                    });
+                    if (remoteItems.length > 0 && !customTownCoords[val]) {
+                        customTownCoords[val] = [remoteItems[0].lat, remoteItems[0].lon];
+                        renderTable();
+                    }
+                    if (document.activeElement === filterTownInput) {
+                        renderTownSuggestions(val, remoteItems);
+                    }
+                }
+            } catch (err) {}
+        }, 320);
+    }
+});
+
+filterTownInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        const firstItem = townSuggestionsEl.querySelector('.town-suggestion-item[data-value]');
+        if (firstItem && townSuggestionsEl.style.display !== 'none') {
+            const val = firstItem.getAttribute('data-value');
+            const lat = firstItem.getAttribute('data-lat');
+            const lon = firstItem.getAttribute('data-lon');
+            if (lat && lon) {
+                customTownCoords[val] = [parseFloat(lat), parseFloat(lon)];
+            }
+            selectTownFilter(val);
+        } else {
+            townSuggestionsEl.style.display = 'none';
+        }
+        filterTownInput.blur();
+    }
+});
+
+document.addEventListener('click', (e) => {
+    if (townComboboxWrap && !townComboboxWrap.contains(e.target)) {
+        townSuggestionsEl.style.display = 'none';
+    }
+});
+
+clearTownBtn.addEventListener('click', () => {
+    selectTownFilter('all');
+    filterTownInput.focus();
+});
+
+gpsTownBtn.addEventListener('click', () => {
+    triggerGpsLocation();
 });
 
 filterRadiusEl.addEventListener('change', (e) => {
@@ -554,7 +768,9 @@ resetFiltersBtn.addEventListener('click', () => {
     currentSearch = '';
 
     filterGenderEl.value = 'all';
-    filterTownEl.value = 'all';
+    filterTownInput.value = '';
+    clearTownBtn.classList.remove('visible');
+    townSuggestionsEl.style.display = 'none';
     filterRadiusEl.value = '20';
     filterSourceEl.value = 'all';
     hideMemoriesToggle.checked = false;

@@ -7,7 +7,7 @@
     <meta name="description" content="Aktuální smuteční vývěska a databáze parte (Loštice, Mohelnice, Moravičany a okolí)">
     <meta name="theme-color" content="#141720">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="styles.css?v=20261103b">
+    <link rel="stylesheet" href="styles.css?v=20261103c">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -66,13 +66,21 @@
                     </select>
                 </div>
 
-                <!-- Filtr: Město / Adresa -->
-                <div class="filter-group">
-                    <label for="filterTown">Město / Oblast:</label>
-                    <select id="filterTown" class="filter-select">
-                        <option value="all">Všechna města</option>
-                        <option value="__gps__">📍 Moje poloha (GPS)</option>
-                    </select>
+                <!-- Filtr: Město / Adresa (s možností psaní a našeptávačem) -->
+                <div class="filter-group filter-town-combobox" id="townComboboxWrap">
+                    <label for="filterTownInput">Město:</label>
+                    <div class="town-input-wrap">
+                        <input
+                            type="text"
+                            id="filterTownInput"
+                            class="filter-town-input"
+                            placeholder="Psát město (např. Loštice)..."
+                            autocomplete="off"
+                        >
+                        <button type="button" id="clearTownBtn" class="clear-town-btn" title="Zobrazit všechna města">&times;</button>
+                        <button type="button" id="gpsTownBtn" class="gps-town-btn" title="Použít moji aktuální polohu (GPS)">📍</button>
+                        <div id="townSuggestions" class="town-suggestions-dropdown" style="display: none;"></div>
+                    </div>
                 </div>
 
                 <!-- Filtr: Okolí v km -->
@@ -187,6 +195,6 @@
         <p>Zdroj dat: <a href="https://www.pshornicek.cz/c-m-s-page/smutecni-vyveska" target="_blank" rel="noopener">Pohřební služba Horníček Miroslav ml.</a> | Hostováno na GitHubu</p>
     </footer>
 
-    <script src="app.js?v=20261103b"></script>
+    <script src="app.js?v=20261103c"></script>
 </body>
 </html>
