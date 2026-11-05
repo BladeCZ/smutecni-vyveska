@@ -33,18 +33,11 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Cache APT balíčků
-        uses: actions/cache@v4
+      - name: Rychlá instalace a cache Tesseract OCR
+        uses: gerlero/apt-install@v1
         with:
-          path: /var/cache/apt/archives/*.deb
-          key: ${{ runner.os }}-apt-tesseract-v1
-
-      - name: Rychlá instalace systémových závislostí (Tesseract OCR)
-        run: |
-          # Aktualizovat pouze základní repozitáře (přeskočí pomalé externí zrcadla)
-          sudo apt-get update -o Dir::Etc::sourcelist="sources.list" -o Dir::Etc::sourceparts="-"
-          # Instalovat pouze minimální tesseract-ocr bez nadbytečných doporučených balíčků
-          sudo apt-get install -y --no-install-recommends tesseract-ocr
+          packages: tesseract-ocr
+          install-recommends: false
 
       - name: Instalace Python knihoven
         run: |
