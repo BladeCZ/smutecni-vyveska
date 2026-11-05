@@ -17,7 +17,6 @@ local.properties
 
 # Temporary
 *.tmp
-scraper/tessdata/
 
 # Fotky parte a obličejů jsou uloženy na Cloudinary (neukládat na GitHub)
 data/images/

@@ -343,20 +343,10 @@ function triggerGpsLocation() {
 }
 
 // Pravidlo archivace: parte je aktuální po dobu 1 týdne (7 dní) od data úmrtí,
-// bez ohledu na to, zda je či není jako aktuální na některém ze zdrojových webů.
+// případně od data prvního stažení (pokud datum úmrtí na parte chybí).
 function applySevenDayArchivingRule(items) {
     const now = new Date();
-    let refTodayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
-
-    // Pokud by datum v databázi bylo novější než hodiny prohlížeče, vezmeme nejnovější datum v DB
-    items.forEach(it => {
-        const iso = (it.death_date_iso || '').trim();
-        if (/^\d{4}-\d{2}-\d{2}$/.test(iso)) {
-            const [y, m, d] = iso.split('-').map(Number);
-            const t = Date.UTC(y, m - 1, d);
-            if (t > refTodayUtc) refTodayUtc = t;
-        }
-    });
+    const refTodayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
 
     items.forEach(item => {
         let refIso = (item.death_date_iso || '').trim();
@@ -367,6 +357,7 @@ function applySevenDayArchivingRule(items) {
             const [y, m, d] = refIso.split('-').map(Number);
             const itemUtc = Date.UTC(y, m - 1, d);
             const diffDays = Math.floor((refTodayUtc - itemUtc) / (1000 * 60 * 60 * 24));
+            // Parte je aktuální 7 dní od úmrtí / stažení
             const isRecent = diffDays <= 7;
             item.is_active = isRecent;
             item.is_archived = !isRecent;
@@ -516,8 +507,8 @@ function getFilteredAndSortedItems(ignoreTab = false) {
             const cmp = (a.name || '').localeCompare(b.name || '', 'cs');
             return sortDesc ? -cmp : cmp;
         } else {
-            const da = a.death_date_iso || '0000-00-00';
-            const db = b.death_date_iso || '0000-00-00';
+            const da = a.death_date_iso || (a.first_seen ? a.first_seen.slice(0, 10) : '0000-00-00');
+            const db = b.death_date_iso || (b.first_seen ? b.first_seen.slice(0, 10) : '0000-00-00');
             if (da !== db) {
                 return sortDesc ? db.localeCompare(da) : da.localeCompare(db);
             }

@@ -197,7 +197,7 @@ CZECH_MONTHS = {
     "srpna": 8, "srpen": 8,
     "září": 9, "zari": 9,
     "října": 10, "rijna": 10, "říjen": 10,
-    "listopadu": 11, "listopad": 11,
+    "listopadu": 11, "listopad": 11, "listpoadu": 11, "listpoad": 11, "listopda": 11,
     "prosince": 12, "prosinec": 12,
 }
 
@@ -223,6 +223,7 @@ def normalize_person_name(raw_name):
         return ""
     s = raw_name.strip(" |-\t\r\n\"'.,;:")
     s = re.sub(r'^Mor\.\s+', 'Mgr. ', s)
+    s = re.sub(r'\b(?:BdD|BD|bd|D)?(?:io|o)ležel\b', 'Doležel', s, flags=re.IGNORECASE)
     s = re.sub(r'\s+', ' ', s)
     words = []
     for w in s.split(' '):
@@ -405,7 +406,8 @@ def normalize_czech_date(text, fallback_date_str=""):
     before_funeral = split_m[0] if split_m else search_space
 
     months_pattern = "|".join(CZECH_MONTHS.keys())
-    for candidate in [before_funeral, fallback_date_str, search_space]:
+    # Hledáme výhradně před pasáží o pohřbu, aby nedošlo k záměně s datem rozloučení
+    for candidate in [before_funeral, fallback_date_str]:
         if not candidate:
             continue
         m = re.search(

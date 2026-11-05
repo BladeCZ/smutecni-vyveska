@@ -37,8 +37,8 @@ import kotlin.math.*
 
 enum class MainTab(val label: String) {
     ACTIVE("📋 Aktuální"),
-    STATS("📊 Statistika"),
-    ARCHIVE("🗄️ Archiv")
+    ARCHIVE("🗄️ Archiv"),
+    STATS("📊 Statistika")
 }
 
 private val TOWN_COORDS_MAP: Map<String, Pair<Double, Double>> = mapOf(
