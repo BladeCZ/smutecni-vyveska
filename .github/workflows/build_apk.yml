@@ -34,12 +34,36 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Sestavení APK (Release a Debug)
+      - name: Sestavení APK (Release a Debug) a vygenerování version.json
         working-directory: android
         run: |
           gradle assembleRelease --stacktrace || gradle assembleDebug --stacktrace
           mkdir -p dist
           cp app/build/outputs/apk/release/*.apk dist/SmutecniVyveska.apk 2>/dev/null || cp app/build/outputs/apk/debug/*.apk dist/SmutecniVyveska.apk
+          python3 -c '
+          import json, os, subprocess
+          from datetime import datetime, timezone
+          run_num = int(os.environ.get("GITHUB_RUN_NUMBER", "1"))
+          v_code = 100 + run_num
+          v_name = f"2.2.{run_num}"
+          apk_path = "dist/SmutecniVyveska.apk"
+          apk_size = os.path.getsize(apk_path) if os.path.exists(apk_path) else 0
+          try:
+              commit_msg = subprocess.check_output(["git", "log", "-1", "--pretty=%s"], text=True).strip()
+          except Exception:
+              commit_msg = "Aktualizace aplikace Smuteční vývěska"
+          meta = {
+              "versionCode": v_code,
+              "versionName": v_name,
+              "apkUrl": "https://github.com/BladeCZ/smutecni-vyveska/releases/download/parte-images/SmutecniVyveska.apk",
+              "apkSize": apk_size,
+              "updatedAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "releaseNotes": commit_msg
+          }
+          with open("dist/version.json", "w", encoding="utf-8") as f:
+              json.dump(meta, f, ensure_ascii=False, indent=2)
+          print("Vygenerován version.json:", meta)
+          '
 
       - name: Uložení APK jako artefakt v GitHub Actions
         uses: actions/upload-artifact@v4
@@ -47,11 +71,12 @@ jobs:
           name: SmutecniVyveska-APK
           path: |
             android/dist/SmutecniVyveska.apk
+            android/dist/version.json
             android/app/build/outputs/apk/release/*.apk
             android/app/build/outputs/apk/debug/*.apk
           retention-days: 90
 
-      - name: Nahrání APK do GitHub Releases pro přímé stažení
+      - name: Nahrání APK a version.json do GitHub Releases pro přímé stažení a aktualizaci
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -59,5 +84,5 @@ jobs:
             gh release create parte-images --title "Úložiště fotek parte a Android aplikace" --notes "Automaticky aktualizované úložiště fotek a APK."
           fi
           if [ -f "android/dist/SmutecniVyveska.apk" ]; then
-            gh release upload parte-images android/dist/SmutecniVyveska.apk --clobber
+            gh release upload parte-images android/dist/SmutecniVyveska.apk android/dist/version.json --clobber
           fi

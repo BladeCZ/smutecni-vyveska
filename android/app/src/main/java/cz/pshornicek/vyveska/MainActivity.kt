@@ -11,6 +11,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import cz.pshornicek.vyveska.data.AppUpdateManager
+import cz.pshornicek.vyveska.data.AppVersionInfo
 import cz.pshornicek.vyveska.data.ObituaryRepository
 import cz.pshornicek.vyveska.model.Obituary
 import cz.pshornicek.vyveska.ui.DetailScreen
@@ -35,6 +37,8 @@ class MainActivity : ComponentActivity() {
         askNotificationPermissionIfNeeded()
         ObituarySyncWorker.schedulePeriodicSync(this)
 
+        val openUpdateFromNotification = intent?.getBooleanExtra("open_update_dialog", false) == true
+
         setContent {
             SmutecniVyveskaTheme {
                 var obituaries by remember { mutableStateOf<List<Obituary>>(emptyList()) }
@@ -46,6 +50,11 @@ class MainActivity : ComponentActivity() {
                 var notifyEnabled by remember { mutableStateOf(repository.isNotificationsEnabled()) }
                 var notifySources by remember { mutableStateOf(repository.getNotificationSources()) }
                 var notifyIncludeMemories by remember { mutableStateOf(repository.getNotifyIncludeMemories()) }
+
+                var versionInfo by remember { mutableStateOf<AppVersionInfo?>(null) }
+                var isCheckingUpdate by remember { mutableStateOf(false) }
+                var updateStatusMessage by remember { mutableStateOf<String?>(null) }
+                var showUpdateDialog by remember { mutableStateOf(openUpdateFromNotification) }
 
                 fun loadData(forceRefresh: Boolean = false) {
                     isLoading = true
@@ -62,8 +71,33 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                fun checkAppUpdate(manualTrigger: Boolean = false) {
+                    isCheckingUpdate = true
+                    if (manualTrigger) {
+                        updateStatusMessage = "Kontroluji aktualizace na GitHubu..."
+                    }
+                    lifecycleScope.launch {
+                        val res = AppUpdateManager.checkForUpdate(this@MainActivity)
+                        isCheckingUpdate = false
+                        res.onSuccess { info ->
+                            versionInfo = info
+                            if (info.isUpdateAvailable) {
+                                updateStatusMessage = "Je dostupná nová verze ${info.remoteVersionName}!"
+                                showUpdateDialog = true
+                            } else if (manualTrigger) {
+                                updateStatusMessage = "Máte nejnovější verzi aplikace (${info.localVersionName})."
+                            }
+                        }.onFailure { err ->
+                            if (manualTrigger) {
+                                updateStatusMessage = "Nepodařilo se ověřit aktualizaci: ${err.localizedMessage ?: "chyba sítě"}"
+                            }
+                        }
+                    }
+                }
+
                 LaunchedEffect(Unit) {
                     loadData(forceRefresh = true)
+                    checkAppUpdate(manualTrigger = false)
                 }
 
                 if (selectedObituary != null) {
@@ -80,6 +114,13 @@ class MainActivity : ComponentActivity() {
                         notifyEnabled = notifyEnabled,
                         notifySources = notifySources,
                         notifyIncludeMemories = notifyIncludeMemories,
+                        versionInfo = versionInfo,
+                        isCheckingUpdate = isCheckingUpdate,
+                        updateStatusMessage = updateStatusMessage,
+                        showUpdateDialog = showUpdateDialog,
+                        onDismissUpdateDialog = { showUpdateDialog = false },
+                        onOpenUpdateDialog = { showUpdateDialog = true },
+                        onCheckForUpdate = { checkAppUpdate(manualTrigger = true) },
                         onRefresh = { loadData(forceRefresh = true) },
                         onUpdateDbUrl = { newUrl ->
                             repository.setDatabaseUrl(newUrl)

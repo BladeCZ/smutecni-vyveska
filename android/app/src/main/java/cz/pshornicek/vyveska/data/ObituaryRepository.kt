@@ -125,7 +125,7 @@ class ObituaryRepository(private val context: Context) {
                 connectTimeout = 10000
                 readTimeout = 10000
                 requestMethod = "GET"
-                setRequestProperty("User-Agent", "SmutecniVyveska-Android/2.1")
+                setRequestProperty("User-Agent", "SmutecniVyveska-Android/2.2")
             }
 
             if (connection.responseCode == 200) {
@@ -207,6 +207,35 @@ class ObituaryRepository(private val context: Context) {
 
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.notify(notificationId, notification)
+        } catch (_: Exception) {
+        }
+    }
+
+    fun sendAppUpdateNotification(versionInfo: AppVersionInfo) {
+        try {
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                putExtra("open_update_dialog", true)
+            }
+            val pendingIntent = PendingIntent.getActivity(
+                context,
+                9500,
+                intent,
+                PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+            )
+
+            val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                .setContentTitle("⬆️ Nová verze aplikace (${versionInfo.remoteVersionName})")
+                .setContentText("Klepněte pro stažení a instalaci aktualizace z GitHubu.")
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .build()
+
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.notify(9500, notification)
         } catch (_: Exception) {
         }
     }

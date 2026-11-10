@@ -1,5 +1,7 @@
 package cz.pshornicek.vyveska.ui
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,6 +17,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,14 +26,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import cz.pshornicek.vyveska.data.AppUpdateManager
+import cz.pshornicek.vyveska.data.AppVersionInfo
+import cz.pshornicek.vyveska.data.InstallLaunchStatus
 import cz.pshornicek.vyveska.data.ObituaryRepository
 import cz.pshornicek.vyveska.model.Obituary
 import cz.pshornicek.vyveska.ui.theme.AccentGold
+import kotlinx.coroutines.launch
+import java.io.File
 import java.text.Normalizer
 import java.util.Locale
 import kotlin.math.*
@@ -134,12 +143,23 @@ fun HomeScreen(
     notifyEnabled: Boolean,
     notifySources: Set<String>,
     notifyIncludeMemories: Boolean,
+    versionInfo: AppVersionInfo?,
+    isCheckingUpdate: Boolean,
+    updateStatusMessage: String?,
+    showUpdateDialog: Boolean,
+    onDismissUpdateDialog: () -> Unit,
+    onOpenUpdateDialog: () -> Unit,
+    onCheckForUpdate: () -> Unit,
     onRefresh: () -> Unit,
     onUpdateDbUrl: (String) -> Unit,
     onSaveNotifySettings: (Boolean, Set<String>, Boolean) -> Unit,
     onTestNotification: () -> Unit,
     onSelectObituary: (Obituary) -> Unit
 ) {
+    val context = LocalContext.current
+    val localVersionName = remember { AppUpdateManager.getLocalVersionName(context) }
+    val localVersionCode = remember { AppUpdateManager.getLocalVersionCode(context) }
+
     var selectedTab by remember { mutableStateOf(MainTab.ACTIVE) }
     var filterExpanded by remember { mutableStateOf(false) }
 
@@ -229,6 +249,15 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    if (versionInfo?.isUpdateAvailable == true) {
+                        IconButton(onClick = onOpenUpdateDialog) {
+                            Icon(
+                                Icons.Default.SystemUpdate,
+                                contentDescription = "Dostupná aktualizace aplikace",
+                                tint = Color(0xFF34D399)
+                            )
+                        }
+                    }
                     IconButton(onClick = { showSettingsDialog = true }) {
                         Icon(
                             Icons.Default.Notifications,
@@ -255,7 +284,49 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // 1. Záložky: Aktuální | Statistika | Archiv
+            // 0. Banner při dostupné aktualizaci z GitHubu
+            if (versionInfo?.isUpdateAvailable == true) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 4.dp)
+                        .clickable { onOpenUpdateDialog() },
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF065F46)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "⬆️ Nová verze aplikace (${versionInfo.remoteVersionName})",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                            Text(
+                                text = "Klepněte pro stažení a instalaci z GitHubu",
+                                color = Color.White.copy(alpha = 0.85f),
+                                fontSize = 11.sp
+                            )
+                        }
+                        Button(
+                            onClick = onOpenUpdateDialog,
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentGold),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text("Stáhnout", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+
+            // 1. Záložky: Aktuální | Archiv | Statistika
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -522,7 +593,7 @@ fun HomeScreen(
         }
     }
 
-    // Dialog Nastavení (Notifikace: výběr pohřební služby, smuteční oznámení vs. vzpomínky + URL)
+    // Dialog Nastavení (Notifikace + Aktualizace z GitHubu + URL)
     if (showSettingsDialog) {
         var tempNotifyEnabled by remember { mutableStateOf(notifyEnabled) }
         var tempSources by remember { mutableStateOf(notifySources) }
@@ -531,7 +602,7 @@ fun HomeScreen(
 
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
-            title = { Text("🔔 Nastavení a upozornění", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+            title = { Text("🔔 Nastavení a aktualizace", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
             text = {
                 Column(
                     modifier = Modifier
@@ -539,6 +610,62 @@ fun HomeScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
+                    // Sekce Aktualizace aplikace z GitHubu
+                    Text("📱 Aktualizace aplikace (GitHub):", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = AccentGold)
+                    Text(
+                        text = "Nainstalovaná verze: $localVersionName (build $localVersionCode)",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+                    if (versionInfo != null) {
+                        val verStatus = if (versionInfo.isUpdateAvailable) {
+                            "🟢 Na GitHubu je nová verze: ${versionInfo.remoteVersionName}"
+                        } else {
+                            "✅ Máte aktuální verzi (${versionInfo.remoteVersionName})"
+                        }
+                        Text(
+                            text = verStatus,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (versionInfo.isUpdateAvailable) Color(0xFF34D399) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                    if (!updateStatusMessage.isNullOrBlank()) {
+                        Text(
+                            text = updateStatusMessage,
+                            fontSize = 11.sp,
+                            color = AccentGold
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onCheckForUpdate,
+                            enabled = !isCheckingUpdate,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = if (isCheckingUpdate) "Kontroluji..." else "🔄 Zkontrolovat",
+                                fontSize = 12.sp
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                showSettingsDialog = false
+                                onOpenUpdateDialog()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentGold),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("⬇️ Stáhnout APK", fontSize = 12.sp)
+                        }
+                    }
+
+                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
+
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -548,7 +675,7 @@ fun HomeScreen(
                         Checkbox(checked = tempNotifyEnabled, onCheckedChange = { tempNotifyEnabled = it })
                         Column {
                             Text("Zapnout upozornění na nová parte", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text("Upozorní vás při objevení nového parte", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
+                            Text("Automatická kontrola na pozadí každých 30 min", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
                         }
                     }
 
@@ -636,6 +763,222 @@ fun HomeScreen(
             }
         )
     }
+
+    // Dialog pro stažení a instalaci aktualizace aplikace z GitHubu
+    if (showUpdateDialog) {
+        AppUpdateDialog(
+            versionInfo = versionInfo,
+            localVersionName = localVersionName,
+            localVersionCode = localVersionCode,
+            onDismiss = onDismissUpdateDialog
+        )
+    }
+}
+
+@Composable
+fun AppUpdateDialog(
+    versionInfo: AppVersionInfo?,
+    localVersionName: String,
+    localVersionCode: Long,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadPercent by remember { mutableIntStateOf(0) }
+    var downloadedBytes by remember { mutableLongStateOf(0L) }
+    var totalBytes by remember { mutableLongStateOf(versionInfo?.apkSizeBytes ?: 0L) }
+    var downloadedFile by remember { mutableStateOf<File?>(null) }
+    var errorMsg by remember { mutableStateOf<String?>(null) }
+    var needsInstallPermission by remember { mutableStateOf(false) }
+
+    val targetApkUrl = versionInfo?.apkUrl ?: AppUpdateManager.DEFAULT_APK_URL
+
+    fun formatMb(bytes: Long): String {
+        if (bytes <= 0L) return ""
+        return String.format(Locale.US, "%.1f MB", bytes / (1024.0 * 1024.0))
+    }
+
+    AlertDialog(
+        onDismissRequest = {
+            if (!isDownloading) onDismiss()
+        },
+        title = {
+            Text(
+                text = if (versionInfo?.isUpdateAvailable == true) "⬆️ Aktualizace aplikace" else "📱 Stažení nejnovější verze z GitHubu",
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant
+                ) {
+                    Column(
+                        modifier = Modifier.padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text("Vaše verze: $localVersionName (build $localVersionCode)", fontSize = 12.sp)
+                        if (versionInfo != null) {
+                            val remoteBuildStr = if (versionInfo.remoteVersionCode > 0) " (build ${versionInfo.remoteVersionCode})" else ""
+                            Text(
+                                text = "Verze na GitHubu: ${versionInfo.remoteVersionName}$remoteBuildStr",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentGold
+                            )
+                            if (versionInfo.apkSizeBytes > 0) {
+                                Text("Velikost balíčku: ${formatMb(versionInfo.apkSizeBytes)}", fontSize = 12.sp)
+                            }
+                            if (versionInfo.releaseNotes.isNotBlank()) {
+                                Spacer(Modifier.height(4.dp))
+                                Text("Poznámka k vydání:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Text(versionInfo.releaseNotes, fontSize = 12.sp)
+                            }
+                        } else {
+                            Text(
+                                text = "Zdroj: GitHub Releases (SmutecniVyveska.apk)",
+                                fontSize = 12.sp,
+                                color = AccentGold
+                            )
+                        }
+                    }
+                }
+
+                if (isDownloading) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        if (downloadPercent >= 0) {
+                            LinearProgressIndicator(
+                                progress = { downloadPercent / 100f },
+                                modifier = Modifier.fillMaxWidth(),
+                                color = AccentGold
+                            )
+                            Text(
+                                text = "Stahování z GitHubu: $downloadPercent % (${formatMb(downloadedBytes)} / ${formatMb(totalBytes)})",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        } else {
+                            LinearProgressIndicator(
+                                modifier = Modifier.fillMaxWidth(),
+                                color = AccentGold
+                            )
+                            Text(
+                                text = "Stahování z GitHubu (${formatMb(downloadedBytes)})...",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+
+                if (needsInstallPermission) {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF78350F)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = "⚠️ Povolte v nastavení telefonu přepínač „Povolit z tohoto zdroje“ a poté klepněte na tlačítko níže pro dokončení instalace.",
+                                fontSize = 12.sp,
+                                color = Color.White
+                            )
+                            Button(
+                                onClick = {
+                                    val file = downloadedFile ?: AppUpdateManager.getDownloadedApkFile(context)
+                                    val status = AppUpdateManager.installDownloadedApk(context, file)
+                                    if (status == InstallLaunchStatus.LAUNCHED_INSTALLER) {
+                                        needsInstallPermission = false
+                                        onDismiss()
+                                    }
+                                },
+                                colors = ButtonDefaults.buttonColors(containerColor = AccentGold),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("📦 Spustit instalaci staženého APK", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
+                if (!errorMsg.isNullOrBlank()) {
+                    Text(
+                        text = errorMsg!!,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = {
+                        try {
+                            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(targetApkUrl))
+                            context.startActivity(browserIntent)
+                        } catch (_: Exception) {
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("🌐 Stáhnout přes webový prohlížeč", fontSize = 12.sp)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    isDownloading = true
+                    errorMsg = null
+                    needsInstallPermission = false
+                    scope.launch {
+                        val res = AppUpdateManager.downloadApk(context, targetApkUrl) { dl, tot, pct ->
+                            downloadedBytes = dl
+                            if (tot > 0) totalBytes = tot
+                            downloadPercent = pct
+                        }
+                        isDownloading = false
+                        res.onSuccess { file ->
+                            downloadedFile = file
+                            when (AppUpdateManager.installDownloadedApk(context, file)) {
+                                InstallLaunchStatus.LAUNCHED_INSTALLER -> {
+                                    onDismiss()
+                                }
+                                InstallLaunchStatus.NEEDS_PERMISSION -> {
+                                    needsInstallPermission = true
+                                }
+                                InstallLaunchStatus.ERROR -> {
+                                    errorMsg = "Nepodařilo se otevřít instalátor balíčku. Zkuste stažení přes prohlížeč."
+                                }
+                            }
+                        }.onFailure { err ->
+                            errorMsg = "Chyba při stahování: ${err.localizedMessage ?: "zkuste to prosím znovu"}"
+                        }
+                    }
+                },
+                enabled = !isDownloading,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentGold)
+            ) {
+                Text(if (isDownloading) "Stahuji..." else "⬇️ Stáhnout a nainstalovat")
+            }
+        },
+        dismissButton = {
+            if (!isDownloading) {
+                TextButton(onClick = onDismiss) {
+                    Text("Později")
+                }
+            }
+        }
+    )
 }
 
 @Composable
