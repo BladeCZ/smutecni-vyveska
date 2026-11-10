@@ -31,7 +31,7 @@ class ObituaryRepository(private val context: Context) {
         const val KEY_NOTIFY_SOURCES = "notify_sources"
         const val KEY_NOTIFY_MEMORIES = "notify_include_memories"
         const val DEFAULT_FALLBACK_URL = "https://bladecz.github.io/smutecni-vyveska/data/database.json"
-        const val CHANNEL_ID = "smutecni_vyveska_notifications"
+        const val CHANNEL_ID = "smutecni_vyveska_notifications_high"
 
         val ALL_SOURCES = listOf(
             "Horníček Moravičany",
@@ -51,9 +51,10 @@ class ObituaryRepository(private val context: Context) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 "Nová smuteční oznámení",
-                NotificationManager.IMPORTANCE_DEFAULT
+                NotificationManager.IMPORTANCE_HIGH
             ).apply {
-                description = "Upozornění na nově přidaná parte na smuteční vývěsce"
+                description = "Automatická upozornění na nově přidaná parte na smuteční vývěsce"
+                enableVibration(true)
             }
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannel(channel)
@@ -93,17 +94,7 @@ class ObituaryRepository(private val context: Context) {
     }
 
     private fun normalizeAndSortItems(rawItems: List<Obituary>): List<Obituary> {
-        var refDate = LocalDate.now()
-        rawItems.forEach { it ->
-            val iso = it.deathDateIso?.trim() ?: ""
-            if (iso.length >= 10) {
-                try {
-                    val d = LocalDate.parse(iso.take(10))
-                    if (d.isAfter(refDate)) refDate = d
-                } catch (_: Exception) {
-                }
-            }
-        }
+        val refDate = LocalDate.now()
 
         return rawItems.map { item ->
             val active = item.isActiveWithinWeek(refDate)
@@ -113,8 +104,9 @@ class ObituaryRepository(private val context: Context) {
                 sourceName = if (item.sourceName.isNullOrBlank() || item.sourceName == "PS Horníček") "Horníček Moravičany" else item.sourceName
             )
         }.sortedWith(
-            compareByDescending<Obituary> { it.deathDateIso ?: "0000-00-00" }
-                .thenBy { it.name }
+            compareByDescending<Obituary> {
+                it.deathDateIso?.takeIf { s -> s.isNotBlank() } ?: it.firstSeen?.take(10) ?: "0000-00-00"
+            }.thenBy { it.name }
         )
     }
 
@@ -133,7 +125,7 @@ class ObituaryRepository(private val context: Context) {
                 connectTimeout = 10000
                 readTimeout = 10000
                 requestMethod = "GET"
-                setRequestProperty("User-Agent", "SmutecniVyveska-Android/2.0")
+                setRequestProperty("User-Agent", "SmutecniVyveska-Android/2.1")
             }
 
             if (connection.responseCode == 200) {
@@ -178,8 +170,8 @@ class ObituaryRepository(private val context: Context) {
                 (includeMemories || item.category != "Vzpomínka")
             }
 
-            newMatchingItems.take(3).forEachIndexed { idx, item ->
-                sendNotification(item, 1000 + idx)
+            newMatchingItems.take(5).forEachIndexed { idx, item ->
+                sendNotification(item, 1000 + (item.id.hashCode() and 0x7FFFFFFF) % 8000 + idx)
             }
         }
 
@@ -193,7 +185,7 @@ class ObituaryRepository(private val context: Context) {
             }
             val pendingIntent = PendingIntent.getActivity(
                 context,
-                0,
+                notificationId,
                 intent,
                 PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
             )
@@ -207,7 +199,8 @@ class ObituaryRepository(private val context: Context) {
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setContentTitle("$prefix${item.getDisplayNameWithAge()}")
                 .setContentText("$townPart$datePart$srcPart")
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
                 .build()

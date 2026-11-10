@@ -16,6 +16,7 @@ import cz.pshornicek.vyveska.model.Obituary
 import cz.pshornicek.vyveska.ui.DetailScreen
 import cz.pshornicek.vyveska.ui.HomeScreen
 import cz.pshornicek.vyveska.ui.theme.SmutecniVyveskaTheme
+import cz.pshornicek.vyveska.work.ObituarySyncWorker
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -32,6 +33,7 @@ class MainActivity : ComponentActivity() {
 
         repository = ObituaryRepository(this)
         askNotificationPermissionIfNeeded()
+        ObituarySyncWorker.schedulePeriodicSync(this)
 
         setContent {
             SmutecniVyveskaTheme {
@@ -91,6 +93,7 @@ class MainActivity : ComponentActivity() {
                             notifyEnabled = enabled
                             notifySources = sources
                             notifyIncludeMemories = includeMemories
+                            ObituarySyncWorker.schedulePeriodicSync(this@MainActivity, replaceExisting = true)
                             if (enabled) {
                                 askNotificationPermissionIfNeeded()
                             }

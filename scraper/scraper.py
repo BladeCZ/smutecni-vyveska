@@ -16,8 +16,13 @@ import time
 import hashlib
 import urllib.parse
 import subprocess
+import socket
 from datetime import datetime
 import requests
+import urllib3.util.connection
+
+# Vynutit IPv4 (GitHub Actions runnery nemají směrování pro IPv6 u některých CZ hostingů jako pshornicek.cz)
+urllib3.util.connection.allowed_gai_family = lambda: socket.AF_INET
 
 try:
     import cv2
@@ -229,6 +234,8 @@ def normalize_person_name(raw_name):
     for w in s.split(' '):
         if len(w) > 2 and w.isupper():
             words.append(w.capitalize())
+        elif len(w) > 1 and w[0].islower() and w.lower() not in ("a", "z", "ze", "v", "ve", "roz.", "rozená"):
+            words.append(w[0].upper() + w[1:])
         else:
             words.append(w)
     return " ".join(words)
@@ -368,8 +375,6 @@ def detect_gender(name, text=""):
         return "MF"
     clean_n = re.sub(r'^(?:Ing\.|Mgr\.|MUDr\.|MVDr\.|JUDr\.|Bc\.|PhDr\.|RNDr\.|DiS\.)\s*', '', name or "", flags=re.IGNORECASE).strip()
     parts = clean_n.split()
-    surname = parts[-1] if parts else ""
-    first_name = parts[0] if parts else ""
     female_first = {
         "Marie", "Eliška", "Jana", "Marta", "Eva", "Bedřiška", "Helena", "Miloslava",
         "Anežka", "Růžena", "Alena", "Božena", "Hana", "Iveta", "Vlasta", "Věra",
@@ -377,7 +382,9 @@ def detect_gender(name, text=""):
         "Zuzana", "Petra", "Lucie", "Pavlína", "Kateřina", "Lenka", "Dagmar", "Irena",
         "Jarmila", "Libuše", "Milada", "Bronislava"
     }
-    if surname.endswith(("ová", "á")) or first_name in female_first:
+    if any(w.endswith(("ová", "á")) or w in female_first for w in parts):
+        return "F"
+    if re.search(r'\b(?:paní|slečna|zemřela|zesnula|odešla|opustila\s+naše)\b', text or "", re.IGNORECASE):
         return "F"
     return "M"
 
@@ -388,7 +395,7 @@ def normalize_age(raw_age, raw_text=""):
         return f"{m_pair.group(1)} let"
     m_num = re.search(r'(\d{1,3})\s*let\b', raw_age or "", re.IGNORECASE)
     if not m_num:
-        m_num = re.search(r'(?:ve\s+v[eě]ku|do[zž]il(?:a)?\s+se)\s+(?:nedo[zž]it[yý]ch\s+)?(\d{1,3})\s*let', raw_text or "", re.IGNORECASE)
+        m_num = re.search(r'(?:ve\s+v[eě]ku|do[zž]il(?:a)?\s+se|nedo[zž]it[yý]ch)\s+(?:nedo[zž]it[yý]ch\s+)?(\d{1,3})\s*let', raw_text or "", re.IGNORECASE)
     if m_num:
         return f"{m_num.group(1)} let"
     if "vesěkuZulet" in (raw_text or ""):
@@ -455,9 +462,9 @@ def extract_face_portrait(image_path, item_id, force=False):
         return ""
 
     h, w = img.shape[:2]
-    # Portrétní fotografie na parte (horní polovina y: 1 % až 48 %, x: 18 % až 96 %)
+    # Portrétní fotografie na parte (horní polovina y: 1 % až 48 %, x: 4 % až 96 %, aby nebyly oříznuty fotky vlevo u Hrandop Litovel)
     y1, y2 = int(h * 0.01), int(h * 0.48)
-    x1, x2 = int(w * 0.18), int(w * 0.96)
+    x1, x2 = int(w * 0.04), int(w * 0.96)
     roi = img[y1:y2, x1:x2]
     gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
 
@@ -561,7 +568,13 @@ def run_ocr(image_path):
 
 def parse_parte_text(text, category="", name=""):
     extracted_name = extract_name_from_ocr(text, name)
-    final_name = extracted_name if (not name or len(name.split()) < 2) else normalize_person_name(name)
+    norm_input_name = normalize_person_name(name)
+    if not norm_input_name or len(norm_input_name.split()) < 2:
+        final_name = extracted_name
+    elif extracted_name and set(extracted_name.lower().split()) == set(norm_input_name.lower().split()):
+        final_name = extracted_name
+    else:
+        final_name = norm_input_name
 
     info = {
         "name": final_name,
@@ -680,11 +693,11 @@ def fetch_html(url):
             last_err = e
             time.sleep(1)
 
-    # 2. Pokus přes systémový curl (prochází přes Wedos TLS filtr u hrandop.cz)
+    # 2. Pokus přes systémový curl s vynuceným IPv4 (-4)
     for curl_bin in ("curl.exe", "curl"):
         try:
             res = subprocess.run(
-                [curl_bin, "-sL", "--max-time", "20", "-A", HEADERS["User-Agent"], url],
+                [curl_bin, "-4", "-sL", "--max-time", "20", "-A", HEADERS["User-Agent"], url],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, encoding="utf-8", errors="ignore"
             )
             if res.returncode == 0 and len(res.stdout) > 500 and "wedos.status.online" not in res.stdout:
@@ -692,16 +705,19 @@ def fetch_html(url):
         except Exception:
             pass
 
-    # 3. Fallback přes záložní proxy
-    proxy_url = f"https://api.allorigins.win/raw?url={urllib.parse.quote(url, safe='')}"
-    try:
-        print(f"  Zkouším záložní proxy pro stažení HTML...")
-        resp = requests.get(proxy_url, headers=HEADERS, timeout=20)
-        if resp.status_code == 200 and len(resp.text) > 500:
-            resp.encoding = 'utf-8'
-            return resp.text
-    except Exception as e:
-        print(f"  Záložní proxy selhala: {e}")
+    # 3. Fallback přes záložní proxy servery
+    for proxy_url in [
+        f"https://api.allorigins.win/raw?url={urllib.parse.quote(url, safe='')}",
+        f"https://api.codetabs.com/v1/proxy?quest={urllib.parse.quote(url, safe='')}"
+    ]:
+        try:
+            print(f"  Zkouším záložní proxy pro stažení HTML...")
+            resp = requests.get(proxy_url, headers=HEADERS, timeout=20)
+            if resp.status_code == 200 and len(resp.text) > 500:
+                resp.encoding = 'utf-8'
+                return resp.text
+        except Exception as e:
+            print(f"  Záložní proxy selhala: {e}")
 
     raise last_err or RuntimeError(f"Nepodařilo se stáhnout {url}")
 
@@ -777,6 +793,8 @@ def parse_drozd_html(html):
     return items
 
 def download_image(url, target_path):
+    if os.path.dirname(target_path):
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
     os.makedirs(WEB_IMAGES_DIR, exist_ok=True)
     web_target = os.path.join(WEB_IMAGES_DIR, os.path.basename(target_path))
     if os.path.exists(target_path) and os.path.getsize(target_path) > 0:
@@ -796,11 +814,11 @@ def download_image(url, target_path):
         except Exception:
             pass
 
-    # 2. Pokus přes curl (pro hrandop.cz apod.)
+    # 2. Pokus přes curl s vynuceným IPv4 (-4)
     for curl_bin in ("curl.exe", "curl"):
         try:
             res = subprocess.run(
-                [curl_bin, "-sL", "--max-time", "25", "-A", HEADERS["User-Agent"], "-o", target_path, url],
+                [curl_bin, "-4", "-sL", "--max-time", "25", "-A", HEADERS["User-Agent"], "-o", target_path, url],
                 stdout=subprocess.PIPE, stderr=subprocess.PIPE
             )
             if res.returncode == 0 and os.path.exists(target_path) and os.path.getsize(target_path) > 1000:
