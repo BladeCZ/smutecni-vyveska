@@ -5,8 +5,15 @@ plugins {
 }
 
 val ciRunNumber = System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull()
-val computedVersionCode = if (ciRunNumber != null) 100 + ciRunNumber else 4
-val computedVersionName = if (ciRunNumber != null) "2.2.$ciRunNumber" else "2.2.0"
+val computedVersionCode = if (ciRunNumber != null) 100 + ciRunNumber else 5
+val computedVersionName = if (ciRunNumber != null) "2.3.$ciRunNumber" else "2.3.0"
+
+val cloudName = (System.getenv("CLOUDINARY_CLOUD_NAME") ?: "pf9pdwlp").ifBlank { "pf9pdwlp" }
+val cloudApiKey = System.getenv("CLOUDINARY_API_KEY") ?: ""
+val cloudApiSecret = System.getenv("CLOUDINARY_API_SECRET") ?: ""
+
+fun escapeBuildConfig(s: String): String =
+    s.replace("\\", "\\\\").replace("\"", "\\\"")
 
 android {
     namespace = "cz.pshornicek.vyveska"
@@ -18,6 +25,10 @@ android {
         targetSdk = 35
         versionCode = computedVersionCode
         versionName = computedVersionName
+
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${escapeBuildConfig(cloudName)}\"")
+        buildConfigField("String", "CLOUDINARY_API_KEY", "\"${escapeBuildConfig(cloudApiKey)}\"")
+        buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${escapeBuildConfig(cloudApiSecret)}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -41,6 +52,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

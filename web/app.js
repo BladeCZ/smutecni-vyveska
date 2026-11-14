@@ -6,7 +6,7 @@ let filterGender = 'all';
 let filterTown = 'all'; // 'all', '__gps__', nebo název města / vlastní zadání
 let filterRadiusKm = 20;
 let filterSource = 'all';
-let hideMemories = false;
+let hideMemories = true; // Výchozí: vzpomínky skryté (zaškrtnutím se zobrazí)
 let sortField = 'date'; // Výchozí řazení: podle data úmrtí
 let sortDesc = true;    // Od nejnovějších (posledních)
 let userGpsCoords = null;
@@ -386,6 +386,24 @@ async function fetchDatabase() {
     }
 
     if (loadedData) {
+        try {
+            const ovResp = await fetch('https://res.cloudinary.com/pf9pdwlp/raw/upload/smutecni-vyveska/overrides.json?nocache=' + Date.now());
+            if (ovResp.ok) {
+                const overrides = await ovResp.json();
+                if (overrides && typeof overrides === 'object') {
+                    loadedData.forEach(item => {
+                        const patch = overrides[item.id];
+                        if (patch && typeof patch === 'object') {
+                            ['name', 'gender', 'category', 'age', 'death_date', 'death_date_iso', 'death_cause', 'residence', 'lat', 'lon', 'ceremony', 'manual_edit'].forEach(k => {
+                                if (k in patch) {
+                                    item[k] = patch[k];
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+        } catch (e) {}
         allItems = loadedData;
         applySevenDayArchivingRule(allItems);
         populateFilterDropdowns(allItems);
@@ -524,7 +542,7 @@ function updateFilterUiState() {
         filterGender !== 'all' ||
         filterTown !== 'all' ||
         filterSource !== 'all' ||
-        hideMemories ||
+        !hideMemories ||
         currentSearch.length > 0;
 
     resetFiltersBtn.style.display = anyFilterActive ? 'inline-flex' : 'none';
@@ -539,7 +557,7 @@ function updateFilterUiState() {
         parts.push(filterRadiusKm > 0 ? `${townLabel} + okolí ${filterRadiusKm} km` : townLabel);
     }
     if (filterSource !== 'all') parts.push(filterSource);
-    if (hideMemories) parts.push('bez vzpomínek');
+    if (!hideMemories) parts.push('včetně vzpomínek');
 
     activeFilterSummary.textContent = parts.length > 0 ? `Aktivní filtr: ${parts.join(' • ')}` : '';
 
@@ -848,7 +866,7 @@ filterSourceEl.addEventListener('change', (e) => {
 });
 
 hideMemoriesToggle.addEventListener('change', (e) => {
-    hideMemories = e.target.checked;
+    hideMemories = !e.target.checked;
     renderTable();
 });
 
@@ -857,7 +875,7 @@ resetFiltersBtn.addEventListener('click', () => {
     filterTown = 'all';
     filterRadiusKm = 20;
     filterSource = 'all';
-    hideMemories = false;
+    hideMemories = true;
     currentSearch = '';
 
     filterGenderEl.value = 'all';

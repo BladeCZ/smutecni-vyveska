@@ -98,6 +98,24 @@ def upload_to_cloudinary(local_path, public_id, folder="smutecni-vyveska"):
         print(f"  [Cloudinary] Výjimka při nahrávání {public_id}: {e}")
     return None
 
+def fetch_remote_overrides():
+    """
+    Stáhne ruční opravy textů parte uložené z mobilní aplikace na Cloudinary (overrides.json).
+    """
+    if not CLOUDINARY_CLOUD_NAME:
+        return {}
+    url = f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/raw/upload/smutecni-vyveska/overrides.json?t={int(time.time())}"
+    try:
+        resp = requests.get(url, timeout=10)
+        if resp.status_code == 200:
+            data = resp.json()
+            if isinstance(data, dict):
+                print(f"[Cloudinary] Načteno {len(data)} ručních úprav parte (overrides.json).")
+                return data
+    except Exception as e:
+        print(f"[Cloudinary] Info: Nepodařilo se načíst overrides.json: {e}")
+    return {}
+
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 DATA_DIR = os.path.join(ROOT_DIR, "data")
 IMAGES_DIR = os.path.join(DATA_DIR, "images")
@@ -1117,6 +1135,15 @@ def run_scraper(enrich_existing_only=False):
         if not r.get("is_active") and not r.get("is_archived"):
             r["is_archived"] = True
 
+    remote_overrides = fetch_remote_overrides()
+    for item_id, patch in remote_overrides.items():
+        if item_id in existing_records and isinstance(patch, dict):
+            target = existing_records[item_id]
+            for field_key in ("name", "gender", "category", "age", "death_date", "death_date_iso", "death_cause", "residence", "lat", "lon", "ceremony"):
+                if field_key in patch:
+                    target[field_key] = patch[field_key]
+            target["manual_edit"] = True
+
     print(f"\nKontroluji OCR rozpoznávání textu, sjednocení dat a detekci obličejů...")
     for item_id, item in existing_records.items():
         fname = item.get("filename") or os.path.basename(item.get("local_image_path", "")) or f"{item_id}.jpg"
@@ -1126,29 +1153,34 @@ def run_scraper(enrich_existing_only=False):
         if (not raw_text or enrich_existing_only) and os.path.exists(img_path):
             raw_text = run_ocr(img_path)
 
-        parsed = parse_parte_text(raw_text, item.get("category", ""), item.get("name", ""))
-        item["raw_text"] = parsed["raw_text"]
-        if parsed["name"]:
-            item["name"] = parsed["name"]
-        item["gender"] = parsed["gender"]
-        if item.get("source_name") in (None, "", "PS Horníček", "ps hornicek"):
-            item["source_name"] = SOURCE_HORNICEK
-        item["residence"] = parsed["residence"] or clean_town(item.get("residence", ""))
-        if item["residence"] == "Lisieux":
-            item["residence"] = "Mohelnice"
-        item["age"] = parsed["age"] or normalize_age(item.get("age", ""), raw_text)
-        disp_date, iso_date = normalize_czech_date(raw_text, item.get("death_date", ""))
-        item["death_date"] = disp_date
-        item["death_date_iso"] = iso_date
-        if parsed["death_cause"]:
-            item["death_cause"] = parsed["death_cause"]
-        if parsed["ceremony"]:
-            item["ceremony"] = parsed["ceremony"]
+        if not item.get("manual_edit"):
+            parsed = parse_parte_text(raw_text, item.get("category", ""), item.get("name", ""))
+            item["raw_text"] = parsed["raw_text"]
+            if parsed["name"]:
+                item["name"] = parsed["name"]
+            item["gender"] = parsed["gender"]
+            if item.get("source_name") in (None, "", "PS Horníček", "ps hornicek"):
+                item["source_name"] = SOURCE_HORNICEK
+            item["residence"] = parsed["residence"] or clean_town(item.get("residence", ""))
+            if item["residence"] == "Lisieux":
+                item["residence"] = "Mohelnice"
+            item["age"] = parsed["age"] or normalize_age(item.get("age", ""), raw_text)
+            disp_date, iso_date = normalize_czech_date(raw_text, item.get("death_date", ""))
+            item["death_date"] = disp_date
+            item["death_date_iso"] = iso_date
+            if parsed["death_cause"]:
+                item["death_cause"] = parsed["death_cause"]
+            if parsed["ceremony"]:
+                item["ceremony"] = parsed["ceremony"]
+        else:
+            item["raw_text"] = raw_text
+            if item.get("source_name") in (None, "", "PS Horníček", "ps hornicek"):
+                item["source_name"] = SOURCE_HORNICEK
 
         coords = TOWN_COORDS.get(item.get("residence", ""))
         if coords:
             item["lat"], item["lon"] = coords[0], coords[1]
-        else:
+        elif not item.get("manual_edit"):
             item["lat"], item["lon"] = None, None
 
         # Nahrání parte na Cloudinary (pokud ještě není na Cloudinary)

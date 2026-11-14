@@ -2,6 +2,8 @@ package cz.pshornicek.vyveska.ui
 
 import android.content.Intent
 import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -133,25 +135,26 @@ private fun getItemCoords(item: Obituary): Pair<Double, Double>? {
     return null
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun HomeScreen(
     obituaries: List<Obituary>,
+    unreadIds: Set<String>,
     isLoading: Boolean,
     errorMessage: String?,
-    currentDbUrl: String,
     notifyEnabled: Boolean,
     notifySources: Set<String>,
     notifyIncludeMemories: Boolean,
+    isBatteryOptimizationIgnored: Boolean,
     versionInfo: AppVersionInfo?,
     isCheckingUpdate: Boolean,
-    updateStatusMessage: String?,
+    updateCheckError: String?,
     showUpdateDialog: Boolean,
     onDismissUpdateDialog: () -> Unit,
     onOpenUpdateDialog: () -> Unit,
     onCheckForUpdate: () -> Unit,
+    onRequestIgnoreBatteryOptimization: () -> Unit,
     onRefresh: () -> Unit,
-    onUpdateDbUrl: (String) -> Unit,
     onSaveNotifySettings: (Boolean, Set<String>, Boolean) -> Unit,
     onTestNotification: () -> Unit,
     onSelectObituary: (Obituary) -> Unit
@@ -168,9 +171,17 @@ fun HomeScreen(
     var filterTown by remember { mutableStateOf("") }
     var filterRadiusKm by remember { mutableIntStateOf(20) }
     var filterSource by remember { mutableStateOf("all") }
-    var hideMemories by remember { mutableStateOf(false) }
+    var showMemories by remember { mutableStateOf(false) } // Výchozí: vzpomínky skryté
 
     var showSettingsDialog by remember { mutableStateOf(false) }
+
+    // Systémové tlačítko Zpět na domovské obrazovce: zavře rozbalený filtr nebo vrátí na Aktuální
+    BackHandler(enabled = filterExpanded) {
+        filterExpanded = false
+    }
+    BackHandler(enabled = !filterExpanded && selectedTab != MainTab.ACTIVE) {
+        selectedTab = MainTab.ACTIVE
+    }
 
     val allKnownTowns = remember(obituaries) {
         val s = TOWN_COORDS_MAP.keys.toMutableSet()
@@ -193,9 +204,9 @@ fun HomeScreen(
         }
     }
 
-    val filteredAllPeriods = remember(obituaries, searchQuery, filterGender, filterTown, filterRadiusKm, filterSource, hideMemories, centerCoords) {
+    val filteredAllPeriods = remember(obituaries, searchQuery, filterGender, filterTown, filterRadiusKm, filterSource, showMemories, centerCoords) {
         obituaries.filter { item ->
-            if (hideMemories && item.category == "Vzpomínka") return@filter false
+            if (!showMemories && item.category == "Vzpomínka") return@filter false
             if (filterGender != "all") {
                 val g = item.gender ?: ""
                 if (g != filterGender && g != "MF") return@filter false
@@ -230,7 +241,7 @@ fun HomeScreen(
     val archiveList = remember(filteredAllPeriods) { filteredAllPeriods.filter { it.isArchived } }
     val displayedList = if (selectedTab == MainTab.ACTIVE) activeList else archiveList
 
-    val anyFilterActive = searchQuery.isNotBlank() || filterGender != "all" || filterTown.isNotBlank() || filterSource != "all" || hideMemories
+    val anyFilterActive = searchQuery.isNotBlank() || filterGender != "all" || filterTown.isNotBlank() || filterSource != "all" || showMemories
 
     Scaffold(
         topBar = {
@@ -499,7 +510,7 @@ fun HomeScreen(
                             }
                         }
 
-                        // Skrýt vzpomínky + Reset
+                        // Zobrazit vzpomínky (výchozí vypnuto) + Reset
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -507,10 +518,10 @@ fun HomeScreen(
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.clickable { hideMemories = !hideMemories }
+                                modifier = Modifier.clickable { showMemories = !showMemories }
                             ) {
-                                Checkbox(checked = hideMemories, onCheckedChange = { hideMemories = it })
-                                Text("Skrýt vzpomínky", fontSize = 13.sp)
+                                Checkbox(checked = showMemories, onCheckedChange = { showMemories = it })
+                                Text("Zobrazit vzpomínky", fontSize = 13.sp)
                             }
                             if (anyFilterActive) {
                                 TextButton(onClick = {
@@ -519,7 +530,7 @@ fun HomeScreen(
                                     filterTown = ""
                                     filterRadiusKm = 20
                                     filterSource = "all"
-                                    hideMemories = false
+                                    showMemories = false
                                 }) {
                                     Text("✕ Zrušit filtry", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                                 }
@@ -583,6 +594,7 @@ fun HomeScreen(
                                 ObituaryTableCard(
                                     obituary = item,
                                     distanceKm = distKm,
+                                    isNew = item.isActive && unreadIds.contains(item.id),
                                     onClick = { onSelectObituary(item) }
                                 )
                             }
@@ -593,16 +605,16 @@ fun HomeScreen(
         }
     }
 
-    // Dialog Nastavení (Notifikace + Aktualizace z GitHubu + URL)
+    // Dialog Nastavení (Notifikace + 1 tlačítko pro kontrolu aktualizací -> 2. stisk otevře podstránku s verzí a APK)
     if (showSettingsDialog) {
         var tempNotifyEnabled by remember { mutableStateOf(notifyEnabled) }
         var tempSources by remember { mutableStateOf(notifySources) }
         var tempIncludeMemories by remember { mutableStateOf(notifyIncludeMemories) }
-        var tempUrl by remember { mutableStateOf(currentDbUrl) }
+        var updateButtonCheckedOnce by remember { mutableStateOf(false) }
 
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
-            title = { Text("🔔 Nastavení a aktualizace", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
+            title = { Text("🔔 Nastavení", fontWeight = FontWeight.Bold, fontSize = 18.sp) },
             text = {
                 Column(
                     modifier = Modifier
@@ -610,62 +622,6 @@ fun HomeScreen(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Sekce Aktualizace aplikace z GitHubu
-                    Text("📱 Aktualizace aplikace (GitHub):", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = AccentGold)
-                    Text(
-                        text = "Nainstalovaná verze: $localVersionName (build $localVersionCode)",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                    )
-                    if (versionInfo != null) {
-                        val verStatus = if (versionInfo.isUpdateAvailable) {
-                            "🟢 Na GitHubu je nová verze: ${versionInfo.remoteVersionName}"
-                        } else {
-                            "✅ Máte aktuální verzi (${versionInfo.remoteVersionName})"
-                        }
-                        Text(
-                            text = verStatus,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (versionInfo.isUpdateAvailable) Color(0xFF34D399) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        )
-                    }
-                    if (!updateStatusMessage.isNullOrBlank()) {
-                        Text(
-                            text = updateStatusMessage,
-                            fontSize = 11.sp,
-                            color = AccentGold
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = onCheckForUpdate,
-                            enabled = !isCheckingUpdate,
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text(
-                                text = if (isCheckingUpdate) "Kontroluji..." else "🔄 Zkontrolovat",
-                                fontSize = 12.sp
-                            )
-                        }
-                        Button(
-                            onClick = {
-                                showSettingsDialog = false
-                                onOpenUpdateDialog()
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = AccentGold),
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("⬇️ Stáhnout APK", fontSize = 12.sp)
-                        }
-                    }
-
-                    HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
-
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -676,6 +632,15 @@ fun HomeScreen(
                         Column {
                             Text("Zapnout upozornění na nová parte", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             Text("Automatická kontrola na pozadí každých 30 min", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
+                        }
+                    }
+
+                    if (!isBatteryOptimizationIgnored) {
+                        OutlinedButton(
+                            onClick = onRequestIgnoreBatteryOptimization,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("🔋 Povolit neomezený běh na pozadí (pro spolehlivé notifikace)", fontSize = 11.sp)
                         }
                     }
 
@@ -733,22 +698,41 @@ fun HomeScreen(
 
                     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f))
 
-                    Text("Zdroj databáze (URL):", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f))
-                    OutlinedTextField(
-                        value = tempUrl,
-                        onValueChange = { tempUrl = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
+                    // Pouze jedno tlačítko pro kontrolu aktualizací; po druhém stisku přejde na podstránku s podrobnostmi
+                    OutlinedButton(
+                        onClick = {
+                            if (!updateButtonCheckedOnce) {
+                                updateButtonCheckedOnce = true
+                                onCheckForUpdate()
+                            } else {
+                                showSettingsDialog = false
+                                onOpenUpdateDialog()
+                            }
+                        },
+                        enabled = !isCheckingUpdate,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        val buttonText = when {
+                            isCheckingUpdate -> "🔄 Kontroluji aktualizace..."
+                            updateButtonCheckedOnce && versionInfo?.isUpdateAvailable == true ->
+                                "⬆️ Nová verze ${versionInfo.remoteVersionName} – zobrazit podrobnosti ▸"
+                            updateButtonCheckedOnce && versionInfo != null ->
+                                "✅ Máte aktuální verzi (${versionInfo.localVersionName}) – podrobnosti ▸"
+                            updateButtonCheckedOnce && !updateCheckError.isNullOrBlank() ->
+                                "⚠️ Chyba ověření – otevřít podrobnosti ▸"
+                            updateButtonCheckedOnce ->
+                                "ℹ️ Podrobnosti aktualizace ▸"
+                            else ->
+                                "🔄 Zkontrolovat aktualizace"
+                        }
+                        Text(buttonText, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         onSaveNotifySettings(tempNotifyEnabled, tempSources, tempIncludeMemories)
-                        if (tempUrl != currentDbUrl) {
-                            onUpdateDbUrl(tempUrl)
-                        }
                         showSettingsDialog = false
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = AccentGold)
@@ -764,7 +748,7 @@ fun HomeScreen(
         )
     }
 
-    // Dialog pro stažení a instalaci aktualizace aplikace z GitHubu
+    // Podstránka / okno s podrobnostmi o verzi aplikace v zařízení a na serveru + odkaz na APK
     if (showUpdateDialog) {
         AppUpdateDialog(
             versionInfo = versionInfo,
@@ -806,7 +790,7 @@ fun AppUpdateDialog(
         },
         title = {
             Text(
-                text = if (versionInfo?.isUpdateAvailable == true) "⬆️ Aktualizace aplikace" else "📱 Stažení nejnovější verze z GitHubu",
+                text = "📱 Informace o verzi a aktualizaci",
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
@@ -825,14 +809,19 @@ fun AppUpdateDialog(
                         modifier = Modifier.padding(10.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Text("Vaše verze: $localVersionName (build $localVersionCode)", fontSize = 12.sp)
+                        Text("Verze v zařízení: $localVersionName (build $localVersionCode)", fontSize = 12.sp)
                         if (versionInfo != null) {
                             val remoteBuildStr = if (versionInfo.remoteVersionCode > 0) " (build ${versionInfo.remoteVersionCode})" else ""
                             Text(
-                                text = "Verze na GitHubu: ${versionInfo.remoteVersionName}$remoteBuildStr",
+                                text = "Verze na serveru (GitHub): ${versionInfo.remoteVersionName}$remoteBuildStr",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = AccentGold
+                            )
+                            Text(
+                                text = if (versionInfo.isUpdateAvailable) "⬆️ Je dostupná nová verze." else "✅ Máte aktuální verzi aplikace.",
+                                fontSize = 12.sp,
+                                color = if (versionInfo.isUpdateAvailable) Color(0xFF34D399) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                             )
                             if (versionInfo.apkSizeBytes > 0) {
                                 Text("Velikost balíčku: ${formatMb(versionInfo.apkSizeBytes)}", fontSize = 12.sp)
@@ -844,11 +833,24 @@ fun AppUpdateDialog(
                             }
                         } else {
                             Text(
-                                text = "Zdroj: GitHub Releases (SmutecniVyveska.apk)",
+                                text = "Zdroj na serveru: GitHub Releases",
                                 fontSize = 12.sp,
                                 color = AccentGold
                             )
                         }
+                        Spacer(Modifier.height(4.dp))
+                        Text("Odkaz na aktuální APK:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text(
+                            text = targetApkUrl,
+                            fontSize = 11.sp,
+                            color = AccentGold,
+                            modifier = Modifier.clickable {
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(targetApkUrl)))
+                                } catch (_: Exception) {
+                                }
+                            }
+                        )
                     }
                 }
 
@@ -974,17 +976,19 @@ fun AppUpdateDialog(
         dismissButton = {
             if (!isDownloading) {
                 TextButton(onClick = onDismiss) {
-                    Text("Později")
+                    Text("Zavřít")
                 }
             }
         }
     )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ObituaryTableCard(
     obituary: Obituary,
     distanceKm: Int? = null,
+    isNew: Boolean = false,
     onClick: () -> Unit
 ) {
     val faceUrl = obituary.getBestFaceUrl()
@@ -1009,7 +1013,7 @@ fun ObituaryTableCard(
                 .fillMaxWidth()
                 .padding(14.dp)
         ) {
-            // Hlavička: Fotka obličeje (pokud je na parte) + Jméno (věk) + Město + Zdroj
+            // Hlavička: Fotka obličeje (pokud je na parte) + Jméno (věk) + Město + Zdroj + Indikátor NOVÉ
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1046,10 +1050,10 @@ fun ObituaryTableCard(
                         )
                     }
 
-                    Row(
+                    FlowRow(
                         modifier = Modifier.padding(top = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         if (!obituary.residence.isNullOrBlank()) {
                             val distStr = if (distanceKm != null) " ($distanceKm km)" else ""
@@ -1057,12 +1061,14 @@ fun ObituaryTableCard(
                                 text = "📍 ${obituary.residence}$distStr",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = AccentGold
+                                color = AccentGold,
+                                modifier = Modifier.align(Alignment.CenterVertically)
                             )
                         }
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.align(Alignment.CenterVertically)
                         ) {
                             Text(
                                 text = obituary.getEffectiveSource(),
@@ -1070,6 +1076,22 @@ fun ObituaryTableCard(
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
+                        }
+                        if (isNew) {
+                            Surface(
+                                shape = RoundedCornerShape(4.dp),
+                                color = AccentGold.copy(alpha = 0.16f),
+                                border = BorderStroke(1.dp, AccentGold.copy(alpha = 0.55f)),
+                                modifier = Modifier.align(Alignment.CenterVertically)
+                            ) {
+                                Text(
+                                    text = "● NOVÉ",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AccentGold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                )
+                            }
                         }
                     }
                 }

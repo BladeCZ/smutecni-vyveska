@@ -28,7 +28,8 @@ data class Obituary(
     val ceremony: String? = null,
     @SerializedName("raw_text") val rawText: String? = null,
     @SerializedName("first_seen") val firstSeen: String? = null,
-    @SerializedName("last_seen") val lastSeen: String? = null
+    @SerializedName("last_seen") val lastSeen: String? = null,
+    @SerializedName("manual_edit") val manualEdit: Boolean? = null
 ) {
     fun getBestImageUrl(): String {
         if (!releaseImageUrl.isNullOrBlank()) return releaseImageUrl

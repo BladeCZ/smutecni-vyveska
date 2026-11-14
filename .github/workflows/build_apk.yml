@@ -5,7 +5,7 @@ on:
     paths:
       - 'android/**'
       - '.github/workflows/build_apk.yml'
-  workflow_dispatch: # Možnost spustit ručně tlačítkem "Run workflow"
+  workflow_dispatch: # Možnost spustit ručně tlačkem "Run workflow"
 
 permissions:
   contents: write
@@ -36,6 +36,10 @@ jobs:
 
       - name: Sestavení APK (Release a Debug) a vygenerování version.json
         working-directory: android
+        env:
+          CLOUDINARY_CLOUD_NAME: ${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY: ${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET: ${{ secrets.CLOUDINARY_API_SECRET }}
         run: |
           gradle assembleRelease --stacktrace || gradle assembleDebug --stacktrace
           mkdir -p dist
@@ -45,7 +49,7 @@ jobs:
           from datetime import datetime, timezone
           run_num = int(os.environ.get("GITHUB_RUN_NUMBER", "1"))
           v_code = 100 + run_num
-          v_name = f"2.2.{run_num}"
+          v_name = f"2.3.{run_num}"
           apk_path = "dist/SmutecniVyveska.apk"
           apk_size = os.path.getsize(apk_path) if os.path.exists(apk_path) else 0
           try:
