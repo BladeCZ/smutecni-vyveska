@@ -104,7 +104,7 @@ def fetch_remote_overrides():
     """
     if not CLOUDINARY_CLOUD_NAME:
         return {}
-    url = f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/raw/upload/smutecni-vyveska/overrides.json?t={int(time.time())}"
+    url = f"https://res.cloudinary.com/{CLOUDINARY_CLOUD_NAME}/raw/upload/v{int(time.time())}/smutecni-vyveska/overrides.json"
     try:
         resp = requests.get(url, timeout=10)
         if resp.status_code == 200:

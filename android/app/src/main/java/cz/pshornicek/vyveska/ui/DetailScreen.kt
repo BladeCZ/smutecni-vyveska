@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import cz.pshornicek.vyveska.model.Obituary
 import cz.pshornicek.vyveska.ui.theme.AccentGold
+import java.text.Normalizer
+import java.util.Locale
 
 private enum class EditableField(val label: String, val multiline: Boolean = false) {
     NAME("Jméno a příjmení"),
@@ -74,8 +76,50 @@ private val DETAIL_TOWN_COORDS: Map<String, Pair<Double, Double>> = mapOf(
     "Litovel" to (49.7011 to 17.0761),
     "Uničov" to (49.7708 to 17.1214),
     "Šumperk" to (49.9653 to 16.9706),
-    "Olomouc" to (49.5938 to 17.2509)
+    "Olomouc" to (49.5938 to 17.2509),
+    "Náklo" to (49.6542 to 17.1292),
+    "Chromeč" to (49.9469 to 16.8719),
+    "Rájec" to (49.8453 to 16.8856),
+    "Postřelmov" to (49.9078 to 16.9061),
+    "Bludov" to (49.9428 to 16.9297),
+    "Ruda nad Moravou" to (49.9839 to 16.8764),
+    "Sudkov" to (49.9114 to 16.9425),
+    "Lesnice" to (49.8736 to 16.9453),
+    "Leština" to (49.8742 to 16.9233),
+    "Brníčko" to (49.8950 to 16.9736),
+    "Kolšov" to (49.9039 to 16.9250),
+    "Nemile" to (49.8808 to 16.8358),
+    "Červenka" to (49.7219 to 17.0811),
+    "Senice na Hané" to (49.6228 to 17.0878),
+    "Cholina" to (49.6611 to 17.0542),
+    "Bílsko" to (49.6472 to 17.0369),
+    "Haňovice" to (49.6797 to 17.0439),
+    "Pňovice" to (49.7192 to 17.1636),
+    "Střeň" to (49.6964 to 17.1528),
+    "Příkazy" to (49.6361 to 17.1450),
+    "Horka nad Moravou" to (49.6400 to 17.2094),
+    "Štěpánov" to (49.6850 to 17.2208),
+    "Bouzov" to (49.7042 to 16.8894),
+    "Hvozd" to (49.6317 to 16.9178),
+    "Luká" to (49.6478 to 16.9467)
 )
+
+private fun normTown(s: String): String {
+    val n = Normalizer.normalize(s.lowercase(Locale.ROOT), Normalizer.Form.NFD)
+    return n.replace(Regex("\\p{InCombiningDiacriticalMarks}+"), "").trim()
+}
+
+private fun resolveTownAndCoords(rawTown: String): Pair<String?, Pair<Double, Double>?> {
+    val trimmed = rawTown.trim()
+    if (trimmed.isBlank()) return null to null
+    val normQ = normTown(trimmed)
+    val match = DETAIL_TOWN_COORDS.entries.firstOrNull { normTown(it.key) == normQ }
+    return if (match != null) {
+        match.key to match.value
+    } else {
+        trimmed to null
+    }
+}
 
 private fun parseCzechDateToIso(rawDate: String): Pair<String, String> {
     val cleaned = rawDate.trim()
@@ -448,12 +492,20 @@ fun DetailScreen(
                                 manualEdit = true
                             )
                             EditableField.DEATH_DATE -> {
-                                val (disp, iso) = parseCzechDateToIso(cleanedDraft)
-                                obituary.copy(
-                                    deathDate = disp.ifBlank { null },
-                                    deathDateIso = iso.ifBlank { obituary.deathDateIso },
-                                    manualEdit = true
-                                )
+                                if (cleanedDraft.isBlank()) {
+                                    obituary.copy(
+                                        deathDate = null,
+                                        deathDateIso = null,
+                                        manualEdit = true
+                                    )
+                                } else {
+                                    val (disp, iso) = parseCzechDateToIso(cleanedDraft)
+                                    obituary.copy(
+                                        deathDate = disp.ifBlank { null },
+                                        deathDateIso = iso.ifBlank { obituary.deathDateIso },
+                                        manualEdit = true
+                                    )
+                                }
                             }
                             EditableField.DEATH_CAUSE -> obituary.copy(
                                 deathCause = cleanedDraft.ifBlank { null },
@@ -471,11 +523,11 @@ fun DetailScreen(
                                 )
                             }
                             EditableField.RESIDENCE -> {
-                                val coords = DETAIL_TOWN_COORDS[cleanedDraft]
+                                val (resolvedTown, coords) = resolveTownAndCoords(cleanedDraft)
                                 obituary.copy(
-                                    residence = cleanedDraft.ifBlank { null },
-                                    lat = coords?.first ?: obituary.lat,
-                                    lon = coords?.second ?: obituary.lon,
+                                    residence = resolvedTown,
+                                    lat = coords?.first,
+                                    lon = coords?.second,
                                     manualEdit = true
                                 )
                             }

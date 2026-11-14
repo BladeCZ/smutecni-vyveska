@@ -387,7 +387,7 @@ async function fetchDatabase() {
 
     if (loadedData) {
         try {
-            const ovResp = await fetch('https://res.cloudinary.com/pf9pdwlp/raw/upload/smutecni-vyveska/overrides.json?nocache=' + Date.now());
+            const ovResp = await fetch('https://res.cloudinary.com/pf9pdwlp/raw/upload/v' + Date.now() + '/smutecni-vyveska/overrides.json', { cache: 'no-store' });
             if (ovResp.ok) {
                 const overrides = await ovResp.json();
                 if (overrides && typeof overrides === 'object') {

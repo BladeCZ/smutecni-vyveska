@@ -45,9 +45,10 @@ class ObituaryRepository(private val context: Context) {
             "Drozd Zábřeh"
         )
 
-        fun getOverridesUrl(): String {
+        fun getOverridesUrl(cacheBust: Boolean = true): String {
             val cloud = BuildConfig.CLOUDINARY_CLOUD_NAME.ifBlank { "pf9pdwlp" }
-            return "https://res.cloudinary.com/$cloud/raw/upload/smutecni-vyveska/overrides.json"
+            val verSegment = if (cacheBust) "/v${System.currentTimeMillis()}" else ""
+            return "https://res.cloudinary.com/$cloud/raw/upload$verSegment/smutecni-vyveska/overrides.json"
         }
     }
 
@@ -160,24 +161,33 @@ class ObituaryRepository(private val context: Context) {
         prefs.edit().putString(KEY_LOCAL_OVERRIDES, obj.toString()).apply()
     }
 
-    private fun fetchRemoteOverridesJson(): JSONObject {
-        return try {
-            val url = URL("${getOverridesUrl()}?t=${System.currentTimeMillis()}")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 6000
-                readTimeout = 6000
-                requestMethod = "GET"
-                setRequestProperty("User-Agent", "SmutecniVyveska-Android/2.3")
+    private fun fetchRemoteOverridesJson(): JSONObject? {
+        val urls = listOf(
+            getOverridesUrl(cacheBust = true),
+            "${getOverridesUrl(cacheBust = false)}?t=${System.currentTimeMillis()}"
+        )
+        for (u in urls) {
+            try {
+                val url = URL(u)
+                val conn = (url.openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 6000
+                    readTimeout = 6000
+                    requestMethod = "GET"
+                    useCaches = false
+                    setRequestProperty("Cache-Control", "no-cache")
+                    setRequestProperty("User-Agent", "SmutecniVyveska-Android/2.3")
+                }
+                val code = conn.responseCode
+                if (code == 200) {
+                    val text = conn.inputStream.bufferedReader().use { it.readText() }
+                    return JSONObject(text)
+                } else if (code == 404) {
+                    return JSONObject()
+                }
+            } catch (_: Exception) {
             }
-            if (conn.responseCode == 200) {
-                val text = conn.inputStream.bufferedReader().use { it.readText() }
-                JSONObject(text)
-            } else {
-                JSONObject()
-            }
-        } catch (_: Exception) {
-            JSONObject()
         }
+        return null
     }
 
     private fun mergeOverridesIntoItems(items: List<Obituary>, remoteOverrides: JSONObject, localOverrides: JSONObject): List<Obituary> {
@@ -186,8 +196,13 @@ class ObituaryRepository(private val context: Context) {
             val localPatch = localOverrides.optJSONObject(item.id)
             val patch = when {
                 remotePatch != null && localPatch != null -> {
-                    val merged = JSONObject(remotePatch.toString())
-                    localPatch.keys().forEach { k -> merged.put(k, localPatch.get(k)) }
+                    val remoteUpdated = remotePatch.optString("updated_at", "")
+                    val localUpdated = localPatch.optString("updated_at", "")
+                    val useLocalFirst = localUpdated >= remoteUpdated
+                    val base = if (useLocalFirst) remotePatch else localPatch
+                    val newer = if (useLocalFirst) localPatch else remotePatch
+                    val merged = JSONObject(base.toString())
+                    newer.keys().forEach { k -> merged.put(k, newer.get(k)) }
                     merged
                 }
                 remotePatch != null -> remotePatch
@@ -195,6 +210,28 @@ class ObituaryRepository(private val context: Context) {
                 else -> null
             }
             if (patch != null) applyPatchToObituary(item, patch) else item
+        }
+    }
+
+    private fun syncPendingLocalOverrides(localOverrides: JSONObject, remoteOverrides: JSONObject) {
+        if (localOverrides.length() == 0) return
+        var needsUpload = false
+        val mergedRemote = JSONObject(remoteOverrides.toString())
+        localOverrides.keys().forEach { idKey ->
+            val localPatch = localOverrides.optJSONObject(idKey) ?: return@forEach
+            val remotePatch = remoteOverrides.optJSONObject(idKey)
+            val localUpdated = localPatch.optString("updated_at", "")
+            val remoteUpdated = remotePatch?.optString("updated_at", "") ?: ""
+            if (remotePatch == null || localUpdated > remoteUpdated) {
+                mergedRemote.put(idKey, localPatch)
+                needsUpload = true
+            }
+        }
+        if (needsUpload) {
+            try {
+                uploadOverridesToCloudinary(mergedRemote)
+            } catch (_: Exception) {
+            }
         }
     }
 
@@ -327,9 +364,13 @@ class ObituaryRepository(private val context: Context) {
 
         // 2. Synchronizace s cloudovou databází overrides.json na Cloudinary
         return@withContext try {
-            val remoteOverrides = fetchRemoteOverridesJson()
+            val remoteOverrides = fetchRemoteOverridesJson() ?: return@withContext Result.success(false)
             localOverrides.keys().forEach { idKey ->
-                remoteOverrides.put(idKey, localOverrides.getJSONObject(idKey))
+                val lp = localOverrides.optJSONObject(idKey) ?: return@forEach
+                val rp = remoteOverrides.optJSONObject(idKey)
+                if (rp == null || lp.optString("updated_at", "") >= rp.optString("updated_at", "")) {
+                    remoteOverrides.put(idKey, lp)
+                }
             }
             remoteOverrides.put(updated.id, patch)
             val uploaded = uploadOverridesToCloudinary(remoteOverrides)
@@ -364,7 +405,11 @@ class ObituaryRepository(private val context: Context) {
                 val jsonString = connection.inputStream.bufferedReader().use { it.readText() }
                 val type = object : TypeToken<List<Obituary>>() {}.type
                 val rawItems: List<Obituary> = gson.fromJson(jsonString, type)
-                val remoteOverrides = fetchRemoteOverridesJson()
+                val fetchedRemoteOverrides = fetchRemoteOverridesJson()
+                val remoteOverrides = fetchedRemoteOverrides ?: JSONObject()
+                if (fetchedRemoteOverrides != null && localOverrides.length() > 0) {
+                    syncPendingLocalOverrides(localOverrides, fetchedRemoteOverrides)
+                }
                 val merged = mergeOverridesIntoItems(rawItems, remoteOverrides, localOverrides)
                 val items = normalizeAndSortItems(merged)
 
